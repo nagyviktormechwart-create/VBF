@@ -1,0 +1,12 @@
+@import "tailwindcss";
+@theme {
+  --color-graphite: #1f2933; --color-steel: #e9edf0; --color-line: #c5ccd3;
+  --color-signal: #2b8454; --color-mint: #7fd1a0; --color-ok: #1f8a4c; --color-bad: #c62d2d;
+}
+body { background: var(--color-steel); color: var(--color-graphite);
+  font-family: "Segoe UI", system-ui, -apple-system, Roboto, sans-serif; }
+.btn { @apply inline-flex items-center justify-center gap-2 min-h-12 px-4 rounded-md font-semibold border border-line bg-white active:translate-y-px; }
+.btn-primary { @apply bg-signal border-signal text-white; }
+.btn-danger { @apply text-bad border-bad; }
+.inp { @apply w-full min-h-12 px-3 rounded-md border border-line bg-white text-base; }
+.lbl { @apply block text-sm font-semibold mb-1; }
