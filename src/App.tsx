@@ -9,9 +9,10 @@ import Overview from './pages/Overview';
 import Search from './pages/Search';
 import Measure from './pages/Measure';
 import Settings from './pages/Settings';
-import { Search as SearchIcon, Gauge, Boxes, Settings as Cog, PlusSquare, ClipboardList, Check, Loader2 } from 'lucide-react';
+import { Moon, Sun, Search as SearchIcon, Gauge, Boxes, Settings as Cog, PlusSquare, ClipboardList, Check, Loader2 } from 'lucide-react';
 import logo from './logo.png';
 import { usePwa } from './pwa';
+import { useTheme } from './theme';
 import { useSave } from './db';
 import Dashboard from './pages/Dashboard';
 import NewInspection from './pages/NewInspection';
@@ -42,11 +43,12 @@ function useOnline() {
 }
 
 export default function App() {
+  const { mode, set: setTheme } = useTheme(); const dark = mode === 'dark' || (mode === 'auto' && matchMedia('(prefers-color-scheme: dark)').matches);
   const online = useOnline(); const go = useNavigate();
   useEffect(() => { const k = (e: KeyboardEvent) => { const t = e.target as HTMLElement; if (e.key === '/' && !/INPUT|TEXTAREA|SELECT/.test(t.tagName) && !t.isContentEditable) { e.preventDefault(); go('/kereses'); } }; addEventListener('keydown', k); return () => removeEventListener('keydown', k); }, [go]); const { needRefresh, update } = usePwa();
   return (
     <div className="min-h-dvh md:flex">
-      <aside className="hidden md:flex md:w-64 flex-col bg-graphite text-white p-3 gap-1 shrink-0">
+      <aside className="hidden md:flex md:w-64 flex-col bg-chrome text-white p-3 gap-1 shrink-0">
         <div className="px-3 py-5 flex flex-col items-center gap-3">
           <img src={logo} alt="VILL-NOVA logó" className="w-28" />
           <span className="text-2xl font-bold tracking-wider text-white">VILL-NOVA</span>
@@ -56,11 +58,11 @@ export default function App() {
           <n.icon size={20} />{n.label}</NavLink>)}
       </aside>
       <div className="flex-1 flex flex-col min-w-0">
-        <header className="bg-graphite text-white px-4 min-h-12 flex items-center justify-between md:justify-end">
+        <header className="bg-chrome text-white px-4 min-h-12 flex items-center justify-between md:justify-end">
           <span className="md:hidden flex items-center gap-2 font-bold tracking-wider"><img src={logo} alt="" className="h-8" />VILL-NOVA</span>
-          <span className="flex items-center gap-3"><Link to="/kereses" aria-label="Keresés" title="Keresés (/)" className="flex items-center min-h-10 px-2"><SearchIcon size={20} /></Link>{!online && <span className="text-sm bg-amber-400 text-graphite rounded px-2">Offline</span>}<SaveIndicator /></span>
+          <span className="flex items-center gap-3"><Link to="/kereses" aria-label="Keresés" title="Keresés (/)" className="flex items-center min-h-10 px-2"><SearchIcon size={20} /></Link><button aria-label={dark ? 'Világos téma' : 'Sötét téma'} title={dark ? 'Világos téma' : 'Sötét téma'} className="flex items-center min-h-10 px-2" onClick={() => setTheme(dark ? 'light' : 'dark')}>{dark ? <Sun size={20} /> : <Moon size={20} />}</button>{!online && <span className="text-sm bg-amber-400 text-graphite rounded px-2">Offline</span>}<SaveIndicator /></span>
         </header>
-        {needRefresh && <div className="bg-amber-100 border-b border-amber-400 px-4 py-2 flex flex-wrap items-center gap-3 text-sm">
+        {needRefresh && <div className="bg-warnbg border-b border-warn px-4 py-2 flex flex-wrap items-center gap-3 text-sm">
           <span className="flex-1">Új verzió érhető el. Fejezd be a félbehagyott mérési pont mentését, majd frissíts.</span>
           <button className="btn btn-primary min-h-10" onClick={update}>Frissítés most</button></div>}
         <main className="flex-1 p-4 md:p-6 pb-24 md:pb-6 max-w-5xl w-full mx-auto">
@@ -81,7 +83,7 @@ export default function App() {
           </Routes>
         </main>
       </div>
-      <nav className="md:hidden fixed bottom-0 inset-x-0 bg-graphite text-white grid grid-cols-5">
+      <nav className="md:hidden fixed bottom-0 inset-x-0 bg-chrome text-white grid grid-cols-5">
         {nav.map(n => <NavLink key={n.to} to={n.to} end={n.to === '/'}
           className={({ isActive }) => `flex flex-col items-center py-2 text-xs gap-1 ${isActive ? 'text-mint' : ''}`}>
           <n.icon size={22} />{n.label}</NavLink>)}

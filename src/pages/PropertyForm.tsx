@@ -22,7 +22,7 @@ export default function PropertyForm({ insp }: { insp: Inspection }) {
     setErr({ ...err, [k]: undefined });
     if (t !== ((insp as unknown as R)[k] ?? '')) { setV({ ...v, [k]: t }); updateInspection(insp.id, { [k]: t } as Partial<Inspection>); }
   }
-  return <details className="bg-white border border-line rounded-md group">
+  return <details className="bg-surface border border-line rounded-md group">
     <summary className="flex items-center justify-between p-4 min-h-14 cursor-pointer font-semibold list-none">Ingatlan és felülvizsgálat adatai
       <ChevronDown size={20} className="group-open:rotate-180 transition-transform" /></summary>
     <div className="p-4 pt-0 grid sm:grid-cols-2 gap-3">{FIELDS.map(f => <div key={f.k} className={f.kind === 'area' ? 'sm:col-span-2' : ''}>
@@ -33,7 +33,7 @@ export default function PropertyForm({ insp }: { insp: Inspection }) {
         : f.kind === 'area'
           ? <textarea className="inp py-2" rows={2} value={v[f.k] ?? ''} onChange={e => setV({ ...v, [f.k]: e.target.value })} onBlur={e => commit(f.k, e.target.value)} />
           : <input className="inp" type={f.kind === 'date' ? 'date' : 'text'} value={v[f.k] ?? ''} onChange={e => setV({ ...v, [f.k]: e.target.value })} onBlur={e => commit(f.k, e.target.value, f.req)} />}
-      {err[f.k] && <p className="text-bad text-sm font-semibold mt-1">{err[f.k]}</p>}
+      {err[f.k] && <p className="text-badfg text-sm font-semibold mt-1">{err[f.k]}</p>}
     </div>)}</div>
   </details>;
 }

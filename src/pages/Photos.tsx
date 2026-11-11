@@ -12,7 +12,7 @@ function Viewer({ photo, onClose }: { photo: Photo; onClose: () => void }) {
       <button className="btn min-h-11" onClick={onClose}><X size={18} />Bezár</button></div>
     <div className="flex-1 min-h-0 flex items-center justify-center">{d ? <img src={d.data} alt={photo.code} className="max-w-full max-h-full object-contain" /> : <span className="text-white">Betöltés...</span>}</div>
     <div className="flex gap-2"><input className="inp" placeholder="Képaláírás / megjegyzés" value={cap} onChange={e => setCap(e.target.value)} onBlur={() => cap !== photo.caption && updatePhoto(photo.id, { caption: cap.trim() })} />
-      <button className="btn btn-danger bg-white" onClick={async () => { if (confirm(`Törlöd a(z) ${photo.code} képet?`)) { await deletePhoto(photo.id); onClose(); } }}><Trash2 size={18} />Törlés</button></div>
+      <button className="btn btn-danger bg-surface" onClick={async () => { if (confirm(`Törlöd a(z) ${photo.code} képet?`)) { await deletePhoto(photo.id); onClose(); } }}><Trash2 size={18} />Törlés</button></div>
   </div>;
 }
 
@@ -35,7 +35,7 @@ export default function Photos({ inspectionId, ownerType, ownerId }: { inspectio
       <label className="btn min-h-11 cursor-pointer"><Camera size={18} />Fénykép készítése<input type="file" accept="image/*" capture="environment" className="sr-only" onChange={add} /></label>
       <label className="btn min-h-11 cursor-pointer"><Img size={18} />Kép kiválasztása<input type="file" accept="image/*" multiple className="sr-only" onChange={add} /></label>
       {busy && <span className="self-center text-sm">Feldolgozás...</span>}</div>
-    {err && <p className="text-bad font-semibold text-sm">{err}</p>}
+    {err && <p className="text-badfg font-semibold text-sm">{err}</p>}
     {shown && <Viewer photo={shown} onClose={() => setView(null)} />}
   </div>;
 }

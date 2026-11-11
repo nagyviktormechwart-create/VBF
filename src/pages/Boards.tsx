@@ -42,7 +42,7 @@ export default function Boards() {
     </div>
     {eb === 'new' && boardForm()}
     {boards.length === 0 && eb !== 'new' && <p>Még nincs elosztó. A mérési pontok hozzárendelése nem kötelező, elosztó nélkül is rögzíthetsz méréseket.</p>}
-    {boards.map(b => { const cs = circuits.filter(c => c.boardId === b.id); return <section key={b.id} className="bg-white border border-line rounded-md p-4 space-y-3">
+    {boards.map(b => { const cs = circuits.filter(c => c.boardId === b.id); return <section key={b.id} className="bg-surface border border-line rounded-md p-4 space-y-3">
       {eb === b.id ? boardForm(b) : <div className="flex items-start gap-2">
         <div className="flex-1 min-w-0"><div className="font-bold text-lg">{b.identifier}{b.name && ` – ${b.name}`}</div>
           <div className="text-sm">{[b.location, b.feed && `Betáplálás: ${b.feed}`, b.voltage && `${b.voltage} V`].filter(Boolean).join(' · ') || 'Nincs több adat megadva'} · {cs.length} áramkör · {cnt.b[b.id] ?? 0} mérési pont</div></div>

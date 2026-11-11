@@ -42,7 +42,7 @@ export default function NetworkForm({ insp }: { insp: Inspection }) {
     const next = { ...n, [f.k]: v }; setN(next); commit(next);
   }
 
-  return <details className="bg-white border border-line rounded-md group">
+  return <details className="bg-surface border border-line rounded-md group">
     <summary className="flex items-center justify-between p-4 min-h-14 cursor-pointer font-semibold list-none">
       <span>Hálózati adatok <span className="font-normal text-sm">({filled ? `${filled} adat megadva` : 'még nincs megadva'})</span></span>
       <ChevronDown size={20} className="group-open:rotate-180 transition-transform" />
@@ -60,7 +60,7 @@ export default function NetworkForm({ insp }: { insp: Inspection }) {
               : <input className="inp" inputMode={f.kind === 'num' ? 'decimal' : 'text'} list={f.list ? 'dl-' + f.k : undefined}
                   value={n[f.k] ?? ''} onChange={e => setN({ ...n, [f.k]: e.target.value })} onBlur={() => blur(f)} />}
           {f.list && <datalist id={'dl-' + f.k}>{f.list.map(o => <option key={o} value={o} />)}</datalist>}
-          {err[f.k] && <p className="text-bad text-sm font-semibold mt-1">{err[f.k]}</p>}
+          {err[f.k] && <p className="text-badfg text-sm font-semibold mt-1">{err[f.k]}</p>}
         </div>)}</div>
       </div>)}
     </div>

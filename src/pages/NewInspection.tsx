@@ -34,7 +34,7 @@ export default function NewInspection() {
 
   return <form onSubmit={submit} className="space-y-4 max-w-2xl">
     <h1 className="text-2xl font-bold">Új felülvizsgálat</h1>
-    {err.length > 0 && <ul className="border border-bad text-bad rounded-md p-3 bg-white">{err.map(m => <li key={m}>{m}</li>)}</ul>}
+    {err.length > 0 && <ul className="border border-bad text-badfg rounded-md p-3 bg-surface">{err.map(m => <li key={m}>{m}</li>)}</ul>}
     {F('Projekt neve *', 'name')}{F('Ingatlan megnevezése', 'property')}{F('Ingatlan címe *', 'address')}
     <div><label className="lbl">Épülettípus</label>
       <select className="inp" value={f.buildingType} onChange={set('buildingType')}>{BUILDING_TYPES.map(b => <option key={b}>{b}</option>)}</select></div>

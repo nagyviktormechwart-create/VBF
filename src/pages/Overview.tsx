@@ -5,7 +5,7 @@ import { AlertTriangle, Camera, ChevronDown, ChevronRight } from 'lucide-react';
 import { db, RESULTS } from '../db';
 import { EMPTY_FILTERS, filterPoints, filtersActive, isComplete, missingCount, NO_RESULT, stats, type Filters } from '../overview';
 
-const COLOR: Record<string, string> = { 'Megfelelő': 'bg-ok text-white', 'Nem megfelelő': 'bg-bad text-white', 'Nem értékelhető': 'bg-slate-400 text-white', 'További vizsgálat szükséges': 'bg-amber-400 text-graphite', [NO_RESULT]: 'bg-steel text-graphite border border-line' };
+const COLOR: Record<string, string> = { 'Megfelelő': 'bg-ok text-white', 'Nem megfelelő': 'bg-bad text-white', 'Nem értékelhető': 'bg-slate-400 text-white', 'További vizsgálat szükséges': 'bg-amber-400 text-graphite', [NO_RESULT]: 'bg-steel text-ink border border-line' };
 const PAGE = 100;
 
 export default function Overview() {
@@ -37,11 +37,11 @@ export default function Overview() {
 
     <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 text-sm">
       {[['Mérési pont', st.total], ['Kitöltött', `${st.complete} (${st.pct}%)`], ['Hiányos', st.incomplete], ['Nem megfelelő', st.byResult['Nem megfelelő'] ?? 0], ['Nincs értékelve', st.byResult[NO_RESULT] ?? 0]]
-        .map(([l, v]) => <div key={l} className="bg-white border border-line rounded-md p-2"><div className="text-2xl font-bold">{v}</div>{l}</div>)}</div>
-    <div className="h-3 bg-white border border-line rounded-full overflow-hidden" aria-label={`${st.pct}% kitöltött`}><div className="h-full bg-ok" style={{ width: st.pct + '%' }} /></div>
+        .map(([l, v]) => <div key={l} className="bg-surface border border-line rounded-md p-2"><div className="text-2xl font-bold">{v}</div>{l}</div>)}</div>
+    <div className="h-3 bg-surface border border-line rounded-full overflow-hidden" aria-label={`${st.pct}% kitöltött`}><div className="h-full bg-ok" style={{ width: st.pct + '%' }} /></div>
     <p className="text-xs">Kitöltött: van minősítés, és nincs hiányzó mérési érték. A „nem végezhető” és „nem alkalmazható” mező nem számít hiányzónak.</p>
 
-    <section className="bg-white border border-line rounded-md p-3 grid sm:grid-cols-4 gap-2 items-end">
+    <section className="bg-surface border border-line rounded-md p-3 grid sm:grid-cols-4 gap-2 items-end">
       <div><label className="lbl">Helyiség</label><select className="inp" value={f.room} onChange={e => set({ room: e.target.value })}><option value="">Mind</option>{rooms.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}</select></div>
       <div><label className="lbl">Elemtípus</label><select className="inp" value={f.element} onChange={e => set({ element: e.target.value })}><option value="">Mind</option>{elements.map(x => <option key={x}>{x}</option>)}</select></div>
       <div><label className="lbl">Minősítés</label><select className="inp" value={f.result} onChange={e => set({ result: e.target.value })}><option value="">Mind</option>{[...RESULTS, NO_RESULT].map(x => <option key={x}>{x}</option>)}</select></div>
@@ -56,7 +56,7 @@ export default function Overview() {
 
     {all.length === 0 && <p>Ebben a felülvizsgálatban még nincs mérési pont.</p>}
     {rooms.map(r => { const list = byRoom.get(r.id) ?? []; if (active && !list.length) return null; const rs = roomStat(r.id); const o = isOpen(r.id); const lim = shown[r.id] ?? PAGE;
-      return <section key={r.id} className="bg-white border border-line rounded-md">
+      return <section key={r.id} className="bg-surface border border-line rounded-md">
         <button className="w-full text-left p-3 min-h-14 flex items-center gap-2" aria-expanded={o} onClick={() => setOpen({ ...open, [r.id]: !o })}>
           {o ? <ChevronDown size={20} /> : <ChevronRight size={20} />}
           <span className="font-bold flex-1 min-w-0 truncate">{r.name}</span>
@@ -70,10 +70,10 @@ export default function Overview() {
               <div className="flex-1 min-w-0"><div className="font-semibold truncate">{p.identifier}</div>
                 <div className="text-xs truncate">{[p.elementName, where, vals].filter(Boolean).join(' · ') || 'Nincs mért érték'}</div>
                 {(miss > 0 || dcs.length > 0 || photos[p.id]) && <div className="text-xs flex flex-wrap gap-2 mt-0.5">
-                  {miss > 0 && <span className="text-amber-700 font-semibold flex items-center gap-1"><AlertTriangle size={12} />{miss} hiányzó érték</span>}
-                  {dcs.length > 0 && <span className="text-bad font-semibold">{dcs.join(', ')}</span>}
+                  {miss > 0 && <span className="text-warnfg font-semibold flex items-center gap-1"><AlertTriangle size={12} />{miss} hiányzó érték</span>}
+                  {dcs.length > 0 && <span className="text-badfg font-semibold">{dcs.join(', ')}</span>}
                   {photos[p.id] > 0 && <span className="flex items-center gap-1"><Camera size={12} />{photos[p.id]}</span>}</div>}</div>
-              {!isComplete(p) && <span className="text-xs text-amber-700 hidden sm:block">hiányos</span>}
+              {!isComplete(p) && <span className="text-xs text-warnfg hidden sm:block">hiányos</span>}
               <span className={`text-xs px-2 py-1 rounded whitespace-nowrap ${COLOR[res]}`}>{res}</span></button></li>; })}
           {list.length > lim && <li className="p-2"><button className="btn w-full" onClick={() => setShown({ ...shown, [r.id]: lim + PAGE })}>További {Math.min(PAGE, list.length - lim)} megjelenítése ({list.length - lim} van hátra)</button></li>}
           {list.length === 0 && <li className="p-3 text-sm">Nincs mérési pont ebben a helyiségben.</li>}

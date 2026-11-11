@@ -25,7 +25,7 @@ export default function RecordForm({ fields, initial, onSave, onCancel }: { fiel
         : f.kind === 'area' ? <textarea className="inp py-2" rows={2} value={v[f.k] ?? ''} onChange={e => setV({ ...v, [f.k]: e.target.value })} />
         : <input className="inp" type={f.kind === 'date' ? 'date' : 'text'} inputMode={f.kind === 'num' ? 'decimal' : 'text'} list={f.list ? 'rf-' + f.k : undefined} value={v[f.k] ?? ''} onChange={e => setV({ ...v, [f.k]: e.target.value })} />}
       {f.list && <datalist id={'rf-' + f.k}>{f.list.map(o => <option key={o} value={o} />)}</datalist>}
-      {err[f.k] && <p className="text-bad text-sm font-semibold mt-1">{err[f.k]}</p>}
+      {err[f.k] && <p className="text-badfg text-sm font-semibold mt-1">{err[f.k]}</p>}
     </div>)}</div>
     <div className="flex gap-2"><button className="btn btn-primary" disabled={busy}>Mentés</button><button type="button" className="btn" onClick={onCancel}>Mégse</button></div>
   </form>;

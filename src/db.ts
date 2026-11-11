@@ -35,7 +35,7 @@ export interface Circuit { id: string; inspectionId: string; boardId: string; id
   characteristic: string; current: string; poles: string; breaking: string; cableMaterial: string; crossSection: string; phases: string;
   note: string; order: number; createdAt: number }
 export interface Room { id: string; inspectionId: string; name: string; order: number; createdAt: number }
-export interface RoomTemplate { id: string; name: string; custom: boolean }
+export interface RoomTemplate { id: string; name: string; custom: boolean; hidden?: boolean }
 // A kategória, lista, alapérték, kötelező jelleg és megjegyzés opcionális: a régi mezők változatlanul működnek.
 export type FieldType = 'decimal' | 'text' | 'date' | 'bool' | 'select';
 export interface FieldDef { id: string; label: string; unit: string; type: FieldType;
@@ -297,3 +297,32 @@ export const deletePhoto = (id: string) => tracked(() => db.transaction('rw', [d
 
 export const saveInstrument = (i: Omit<Instrument, 'createdAt'> & { createdAt?: number }) => tracked(() => db.instruments.put({ ...i, createdAt: i.createdAt ?? now() }));
 export const deleteInstrument = (id: string) => tracked(() => db.instruments.delete(id));
+
+// Beállítások: helyiségjavaslatok, alapértelmezett mértékegységek, adatkezelés
+export const addRoomTemplate = (name: string) => tracked(async () => {
+  name = name.trim(); if (!name) throw new Error('Add meg a helyiség nevét.');
+  if (await db.roomTemplates.where('name').equalsIgnoreCase(name).first()) throw new Error('Ilyen nevű helyiségjavaslat már van.');
+  await db.roomTemplates.add({ id: crypto.randomUUID(), name, custom: true });
+});
+export const renameRoomTemplate = (id: string, name: string) => tracked(async () => {
+  name = name.trim(); if (!name) throw new Error('A név nem lehet üres.');
+  const ex = await db.roomTemplates.where('name').equalsIgnoreCase(name).first();
+  if (ex && ex.id !== id) throw new Error('Ilyen nevű helyiségjavaslat már van.');
+  await db.roomTemplates.update(id, { name });
+});
+// Az alap javaslatokat elrejteni lehet, az egyénieket törölni; a már felvett helyiségek nem változnak.
+export const setRoomTemplateHidden = (id: string, hidden: boolean) => tracked(() => db.roomTemplates.update(id, { hidden }));
+export const deleteRoomTemplate = (id: string) => tracked(() => db.roomTemplates.delete(id));
+
+export const DEFAULT_UNITS_KEY = 'defaultUnits';
+export async function getDefaultUnits(): Promise<Record<string, string>> { return ((await db.settings.get(DEFAULT_UNITS_KEY))?.value as Record<string, string> | undefined) ?? {}; }
+export const setDefaultUnit = (label: string, unit: string) => tracked(async () => {
+  label = label.trim(); if (!label) throw new Error('Add meg a mező nevét.');
+  const m = await getDefaultUnits(); for (const k of Object.keys(m)) if (k.toLowerCase() === label.toLowerCase()) delete m[k];
+  if (unit.trim()) m[label] = unit.trim();
+  await db.settings.put({ key: DEFAULT_UNITS_KEY, value: m });
+});
+export const removeDefaultUnit = (label: string) => tracked(async () => { const m = await getDefaultUnits(); delete m[label]; await db.settings.put({ key: DEFAULT_UNITS_KEY, value: m }); });
+
+// Minden adat törlése (a felület előtte mentést készít és megerősítést kér); utána az alap katalógus újra feltöltődik.
+export const wipeAll = () => tracked(async () => { await db.transaction('rw', db.tables, async () => { for (const t of db.tables) await t.clear(); }); await seed(); });

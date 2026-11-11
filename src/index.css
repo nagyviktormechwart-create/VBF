@@ -1,12 +1,20 @@
 @import "tailwindcss";
 @theme {
-  --color-graphite: #1f2933; --color-steel: #e9edf0; --color-line: #c5ccd3;
-  --color-signal: #2b8454; --color-mint: #7fd1a0; --color-ok: #1f8a4c; --color-bad: #c62d2d;
+  --color-graphite: #1f2933;   /* állandó sötét szöveg a sárga jelzéseken */
+  --color-ink: #1f2933; --color-steel: #e9edf0; --color-surface: #ffffff; --color-line: #c5ccd3; --color-chrome: #1f2933;
+  --color-signal: #2b8454; --color-mint: #7fd1a0; --color-ok: #1a7a42; --color-bad: #c62d2d;
+  --color-okfg: #1f8a4c; --color-badfg: #c62d2d; --color-warnfg: #b45309; --color-warnbg: #fef3c7; --color-warn: #fbbf24;
 }
-body { background: var(--color-steel); color: var(--color-graphite);
+/* Sötét téma: a színek változók, így az egész felület egyszerre vált. */
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --color-ink: #e6ebef; --color-steel: #10161c; --color-surface: #1b242d; --color-line: #3a4753; --color-chrome: #0b1015;
+  --color-okfg: #6fd69a; --color-badfg: #ff8f8f; --color-warnfg: #fbbf24; --color-warnbg: #3d3210; --color-warn: #a16207;
+}
+body { background: var(--color-steel); color: var(--color-ink);
   font-family: "Segoe UI", system-ui, -apple-system, Roboto, sans-serif; }
-.btn { @apply inline-flex items-center justify-center gap-2 min-h-12 px-4 rounded-md font-semibold border border-line bg-white active:translate-y-px; }
+.btn { @apply inline-flex items-center justify-center gap-2 min-h-12 px-4 rounded-md font-semibold border border-line bg-surface text-ink active:translate-y-px; }
 .btn-primary { @apply bg-signal border-signal text-white; }
-.btn-danger { @apply text-bad border-bad; }
-.inp { @apply w-full min-h-12 px-3 rounded-md border border-line bg-white text-base; }
+.btn-danger { @apply text-badfg border-bad; }
+.inp { @apply w-full min-h-12 px-3 rounded-md border border-line bg-surface text-ink text-base; }
 .lbl { @apply block text-sm font-semibold mb-1; }

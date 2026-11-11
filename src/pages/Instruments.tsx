@@ -24,12 +24,12 @@ export default function Instruments() {
     <div className="flex flex-wrap items-center justify-between gap-2"><h1 className="text-2xl font-bold">Mérőműszerek</h1>
       <button className="btn btn-primary" onClick={() => setEdit('new')}><Plus size={18} />Új mérőműszer</button></div>
     {edit === 'new' && form()}
-    {earlier.length > 0 && <section className="bg-white border border-line rounded-md p-3 space-y-2"><h2 className="font-semibold">Korábban használt műszerek hozzáadása</h2>
+    {earlier.length > 0 && <section className="bg-surface border border-line rounded-md p-3 space-y-2"><h2 className="font-semibold">Korábban használt műszerek hozzáadása</h2>
       <div className="flex flex-wrap gap-2">{earlier.map(i => <button key={i.id} className="btn min-h-11 text-sm"
         onClick={() => saveInstrument({ ...i, id: crypto.randomUUID(), inspectionId: id, createdAt: undefined })}>{[i.manufacturer, i.type, i.serial && `(${i.serial})`].filter(Boolean).join(' ')}</button>)}</div>
       <p className="text-xs">A hozzáadott műszer adatai ehhez a felülvizsgálathoz másolódnak, a kalibrálási adatok itt külön módosíthatók.</p></section>}
     {list.length === 0 && edit !== 'new' && <p>Ehhez a felülvizsgálathoz még nincs mérőműszer megadva.</p>}
-    <ul className="divide-y divide-line bg-white border border-line rounded-md">{list.map(i => <li key={i.id} className="p-3">
+    <ul className="divide-y divide-line bg-surface border border-line rounded-md">{list.map(i => <li key={i.id} className="p-3">
       {edit === i.id ? form(i) : <div className="flex items-center gap-2">
         <div className="flex-1 min-w-0"><div className="font-semibold">{[i.manufacturer, i.type].filter(Boolean).join(' ')}</div>
           <div className="text-sm">{[i.serial && `Gyári szám: ${i.serial}`, i.deviceId && `Azonosító: ${i.deviceId}`, i.calDate && `Kalibrálás/ellenőrzés: ${i.calDate}`, i.calDoc].filter(Boolean).join(' · ') || 'Nincs több adat megadva'}</div></div>

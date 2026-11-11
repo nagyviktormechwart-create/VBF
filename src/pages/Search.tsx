@@ -17,7 +17,7 @@ export default function Search() {
   }, [q]);   // eslint-disable-line react-hooks/exhaustive-deps
   const total = res ? res.projects.length + res.rooms.length + res.points.length + res.elements.length : 0;
   const head = (t: string, n: number, more: boolean) => <h2 className="font-semibold mt-4 mb-1">{t} ({n}{more ? '+' : ''})</h2>;
-  const box = 'divide-y divide-line bg-white border border-line rounded-md';
+  const box = 'divide-y divide-line bg-surface border border-line rounded-md';
   const row = 'block p-3 min-h-14 hover:bg-steel';
 
   return <div className="space-y-2">

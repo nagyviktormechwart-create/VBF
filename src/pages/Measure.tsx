@@ -91,7 +91,7 @@ export default function Measure() {
     <div className="flex gap-2 overflow-x-auto pb-1">{rooms.map(r => <button key={r.id} onClick={() => { setRoomId(r.id); reset(); }}
       className={`btn shrink-0 ${r.id === room?.id ? 'btn-primary' : ''}`}>{r.name}</button>)}</div>
 
-    <section className="bg-white border border-line rounded-md p-4 space-y-3">
+    <section className="bg-surface border border-line rounded-md p-4 space-y-3">
       <h2 className="font-semibold">{editing ? 'Mérési pont szerkesztése' : 'Új mérési pont'} – {room?.name}</h2>
       <div className="flex flex-wrap gap-2">{enabled.filter(c => c.favorite).map(c => <button key={c.id} className="btn min-h-11" onClick={() => { setElName(c.name); setOverride(null); setNewFields([]); setFieldOv(null); }}>{c.name}</button>)}</div>
       <div><label className="lbl">Mérési elem (keresés vagy új név beírása)</label>
@@ -111,7 +111,7 @@ export default function Measure() {
           {fieldOv && <button className="btn" onClick={() => setFieldOv(null)}>Vissza az alapmezőkhöz</button>}</div></details>}
       <div className="grid sm:grid-cols-2 gap-3">{fields.map(f => <div key={f.id}>
         <div className="flex items-center justify-between gap-2"><label className="lbl">{f.label}{f.unit && ` (${f.unit})`}</label>
-          <select aria-label="Mező állapota" className="text-xs border border-line rounded bg-white min-h-8 mb-1" value={fstat[f.id] ?? ''}
+          <select aria-label="Mező állapota" className="text-xs border border-line rounded bg-surface min-h-8 mb-1" value={fstat[f.id] ?? ''}
             onChange={e => { setFstat({ ...fstat, [f.id]: e.target.value as ValueStatus | '' }); if (e.target.value) setVals({ ...vals, [f.id]: '' }); }}>
             <option value="">Automatikus</option><option value="nem végezhető">Nem végezhető</option><option value="nem alkalmazható">Nem alkalmazható</option></select></div>
         {f.type === 'bool' || f.type === 'select'
@@ -125,19 +125,19 @@ export default function Measure() {
       <div><label className="lbl">Minősítés</label><select className="inp" value={result} onChange={e => setResult(e.target.value)}>
         <option value="">Nincs megadva</option>{RESULTS.map(r => <option key={r}>{r}</option>)}</select></div>
       <div><label className="lbl">Megjegyzés</label><textarea className="inp py-2" rows={2} value={note} onChange={e => setNote(e.target.value)} /></div>
-      {err && <p className="text-bad font-semibold">{err}</p>}
+      {err && <p className="text-badfg font-semibold">{err}</p>}
       <div className="flex gap-2"><button className="btn btn-primary flex-1" onClick={save}>{editing ? 'Módosítás mentése' : 'Mérési pont mentése'}</button>
         {editing && <button className="btn" onClick={() => reset(false)}>Mégse</button>}</div>
     </section>
 
     <section>
       <h2 className="font-semibold mb-2">{room?.name}: {points.length} mérési pont</h2>
-      <ul className="divide-y divide-line bg-white border border-line rounded-md">{points.map(p => <li key={p.id} className="p-3 flex flex-wrap items-center gap-2">
+      <ul className="divide-y divide-line bg-surface border border-line rounded-md">{points.map(p => <li key={p.id} className="p-3 flex flex-wrap items-center gap-2">
         <div className="flex-1 min-w-0"><div className="font-semibold">{p.identifier}</div>
           <div className="text-sm truncate">{p.values.filter(v => v.value !== null || v.status === 'nem végezhető' || v.status === 'nem alkalmazható').map(v => v.value !== null ? `${v.label}: ${v.value}${v.unit ? ' ' + v.unit : ''}` : `${v.label}: ${v.status}`).join(' · ') || 'Nincs mért érték'}</div>
           {(p.boardId || p.circuitId) && <div className="text-xs">{[boards.find(b => b.id === p.boardId)?.identifier && `Elosztó: ${boards.find(b => b.id === p.boardId)!.identifier}`, circuits.find(c => c.id === p.circuitId)?.identifier && `Áramkör: ${circuits.find(c => c.id === p.circuitId)!.identifier}`].filter(Boolean).join(' · ')}</div>}
           {p.result === 'Megfelelő' && p.values.some(v => valueStatus(v) === 'hiányzik') &&
-            <div className="text-xs text-amber-700 font-semibold flex items-center gap-1 mt-0.5"><AlertTriangle size={14} />{p.values.filter(v => valueStatus(v) === 'hiányzik').length} mérési érték hiányzik, a minősítés „Megfelelő”</div>}</div>
+            <div className="text-xs text-warnfg font-semibold flex items-center gap-1 mt-0.5"><AlertTriangle size={14} />{p.values.filter(v => valueStatus(v) === 'hiányzik').length} mérési érték hiányzik, a minősítés „Megfelelő”</div>}</div>
         {p.result && <span className={`text-xs px-2 py-1 rounded ${COLOR[p.result]}`}>{p.result}</span>}
         <button className="btn" aria-label="Fényképek" onClick={() => setPhotoOpen(photoOpen === p.id ? null : p.id)}><Camera size={18} />{pc[p.id] ? <span className="text-sm">{pc[p.id]}</span> : null}</button>
         <button className="btn" aria-label="Hiba létrehozása vagy megnyitása" onClick={() => defect(p)}><AlertOctagon size={18} /></button>

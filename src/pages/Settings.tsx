@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 import { usePwa } from '../pwa';
+import { CatalogInfo, DataManagement, DefaultUnits, RoomSuggestions } from './SettingsExtra';
+import { useTheme, type ThemeMode } from '../theme';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { Download, Upload } from 'lucide-react';
 import { db, tracked } from '../db';
@@ -14,7 +16,7 @@ function Storage() {
   useEffect(() => { void load(); }, []);
   const mb = (x?: number) => (x === undefined ? '?' : (x / 1048576).toFixed(0) + ' MB');
   const sw = 'serviceWorker' in navigator && location.protocol !== 'file:';
-  return <section className="bg-white border border-line rounded-md p-4 space-y-2 text-sm">
+  return <section className="bg-surface border border-line rounded-md p-4 space-y-2 text-sm">
     <h2 className="font-semibold text-base">Telepítés, offline használat és tárhely</h2>
     <p>Kapcsolat: {navigator.onLine ? 'online' : 'offline'} · Offline használat: {!sw ? 'ebben a megnyitási módban nem érhető el (telepíthető, hostolt változatban működik)' : offlineReady ? 'kész' : 'a betöltés után automatikusan elérhető'}</p>
     <p>Tartós tárhely: {info.persisted === undefined ? 'nem támogatott' : info.persisted ? 'igen' : 'nem (a böngésző szükség esetén törölhet adatot, ezért mentsd rendszeresen)'} · Foglalt hely: {mb(info.usage)} / {mb(info.quota)}</p>
@@ -27,6 +29,7 @@ function Storage() {
 }
 
 export default function Settings() {
+  const { mode, set: setTheme } = useTheme();
   const saved = useLiveQuery(async () => ((await db.settings.get('defaultInspector'))?.value as string | undefined) ?? '', []);
   const [draft, setDraft] = useState<string | null>(null);
   const counts = useLiveQuery(async () => { const o: Record<string, number> = {}; for (const t of db.tables) o[t.name] = await t.count(); return o; }, []) ?? {};
@@ -52,7 +55,12 @@ export default function Settings() {
 
   return <div className="space-y-6 max-w-2xl">
     <h1 className="text-2xl font-bold">Beállítások</h1>
-    <section className="bg-white border border-line rounded-md p-4 space-y-3">
+    <section className="bg-surface border border-line rounded-md p-4 space-y-3">
+      <h2 className="font-semibold">Megjelenés</h2>
+      <div className="flex flex-wrap gap-2">{([['light', 'Világos'], ['dark', 'Sötét'], ['auto', 'Automatikus (a rendszer beállítása szerint)']] as [ThemeMode, string][]).map(([m, l]) =>
+        <button key={m} aria-pressed={mode === m} className={`btn ${mode === m ? 'btn-primary' : ''}`} onClick={() => setTheme(m)}>{l}</button>)}</div>
+    </section>
+    <section className="bg-surface border border-line rounded-md p-4 space-y-3">
       <h2 className="font-semibold">Alapértelmezett felülvizsgáló neve</h2>
       <div className="flex gap-2">
         <input className="inp" value={draft ?? saved ?? ''} onChange={e => setDraft(e.target.value)} />
@@ -60,7 +68,7 @@ export default function Settings() {
       </div>
     </section>
 
-    <section className="bg-white border border-line rounded-md p-4 space-y-3">
+    <section className="bg-surface border border-line rounded-md p-4 space-y-3">
       <h2 className="font-semibold">Adatmentés és visszaállítás</h2>
       <p className="text-sm">Az adataid csak ebben a böngészőben és ezen a címen vannak tárolva. Rendszeresen mentsd le őket, és minden frissítés előtt is.</p>
       <p className="text-sm">Jelenleg: {Object.entries(counts).filter(([n]) => LABEL[n] && n !== 'settings').map(([n, c]) => `${c} ${LABEL[n]}`).join(', ')}.</p>
@@ -68,8 +76,8 @@ export default function Settings() {
       <div className="border-t border-line pt-3 space-y-3">
         <label className="btn cursor-pointer"><Upload size={18} />Mentésfájl kiválasztása
           <input type="file" accept=".json,application/json" className="sr-only" onChange={pick} /></label>
-        {err && <p className="text-bad font-semibold">{err}</p>}
-        {msg && <p className="text-ok font-semibold">{msg}</p>}
+        {err && <p className="text-badfg font-semibold">{err}</p>}
+        {msg && <p className="text-okfg font-semibold">{msg}</p>}
         {bk && <div className="space-y-2">
           <p className="font-semibold">A fájl érvényes. Tartalma{bk.b.createdAt ? ` (${bk.b.createdAt.slice(0, 10)})` : ''}:</p>
           <ul className="text-sm list-disc pl-5">{Object.entries(bk.info.rows).filter(([n]) => LABEL[n] && n !== 'settings').map(([n, v]) =>
@@ -80,10 +88,14 @@ export default function Settings() {
       </div>
     </section>
 
+    <CatalogInfo />
+    <RoomSuggestions />
+    <DefaultUnits />
     <Storage />
-    <section className="bg-white border border-line rounded-md p-4 text-sm space-y-1">
+    <DataManagement />
+    <section className="bg-surface border border-line rounded-md p-4 text-sm space-y-1">
       <h2 className="font-semibold text-base">Alkalmazás információ</h2>
-      <p>VILL-NOVA · adatbázis-verzió: {db.verno} · mentésformátum: v1</p>
+      <p>VILL-NOVA · alkalmazás nyelve: magyar · adatbázis-verzió: {db.verno} · mentésformátum: v1</p>
     </section>
   </div>;
 }

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { ArrowDown, ArrowUp, Plus, X } from 'lucide-react';
-import { db, type FieldDef, type FieldType } from '../db';
+import { db, getDefaultUnits, type FieldDef, type FieldType } from '../db';
 import { FIELD_GROUPS, LIBRARY, categoryOf } from '../fields';
 
 export const fieldKey = (f: { label: string; unit: string }) => `${f.label}|${f.unit}`;
@@ -12,6 +12,7 @@ const EMPTY = { label: '', unit: '', type: 'decimal' as FieldType, category: FIE
 // locked: ezek a mezők nem vehetők ki (pl. már rögzített értékű mezők szerkesztésekor).
 export default function FieldPicker({ value, onChange, locked }: { value: FieldDef[]; onChange: (v: FieldDef[]) => void; locked?: Set<string> }) {
   const cat = useLiveQuery(() => db.catalog.toArray(), []) ?? [];
+  const units = useLiveQuery(getDefaultUnits, []) ?? {};
   const [extra, setExtra] = useState<FieldDef[]>([]);
   const [c, setC] = useState(EMPTY); const [cerr, setCerr] = useState('');
   const opts = new Map<string, FieldDef>();
@@ -50,7 +51,7 @@ export default function FieldPicker({ value, onChange, locked }: { value: FieldD
       <div className="text-xs font-semibold uppercase tracking-wide mb-1">{g}</div><div className="flex flex-wrap gap-2">{l.map(chip)}</div></div> : null; })}
     <details className="border-t border-line pt-3"><summary className="font-semibold cursor-pointer min-h-10 flex items-center">Egyéni mező létrehozása</summary>
       <div className="grid sm:grid-cols-2 gap-3 mt-2">
-        <div><label className="lbl">Mező neve</label><input className="inp" value={c.label} onChange={e => setC({ ...c, label: e.target.value })} /></div>
+        <div><label className="lbl">Mező neve</label><input className="inp" value={c.label} onChange={e => { const l = e.target.value; const u = Object.entries(units).find(([k]) => k.toLowerCase() === l.trim().toLowerCase())?.[1]; setC({ ...c, label: l, unit: c.unit || u || '' }); }} /></div>
         <div><label className="lbl">Adattípus</label><select className="inp" value={c.type} onChange={e => setC({ ...c, type: e.target.value as FieldType })}>
           {(Object.keys(TYPE_L) as FieldType[]).map(t => <option key={t} value={t}>{TYPE_L[t]}</option>)}</select></div>
         <div><label className="lbl">Mértékegység</label><input className="inp" value={c.unit} onChange={e => setC({ ...c, unit: e.target.value })} /></div>
@@ -61,7 +62,7 @@ export default function FieldPicker({ value, onChange, locked }: { value: FieldD
         <div><label className="lbl">Megjegyzés a mezőhöz</label><input className="inp" value={c.note} onChange={e => setC({ ...c, note: e.target.value })} /></div>
         <label className="flex items-center gap-2 min-h-12"><input type="checkbox" className="size-6" checked={c.req} onChange={e => setC({ ...c, req: e.target.checked })} />Kötelező kitölteni</label>
       </div>
-      {cerr && <p className="text-bad font-semibold mt-2">{cerr}</p>}
+      {cerr && <p className="text-badfg font-semibold mt-2">{cerr}</p>}
       <button type="button" className="btn mt-2" onClick={addCustom}><Plus size={18} />Mező hozzáadása</button>
     </details>
   </div>;

@@ -13,7 +13,7 @@ function Txt({ label, value, onCommit, area, date, list, req }: { label: string;
   return <div className={area ? 'sm:col-span-2' : ''}><label className="lbl">{label}{req && ' *'}</label>
     {area ? <textarea className="inp py-2" rows={2} value={v} onChange={x => setV(x.target.value)} onBlur={blur} />
       : <input className="inp" type={date ? 'date' : 'text'} list={list ? lid : undefined} value={v} onChange={x => setV(x.target.value)} onBlur={blur} />}
-    {list && <datalist id={lid}>{list.map(o => <option key={o} value={o} />)}</datalist>}{e && <p className="text-bad text-sm font-semibold mt-1">{e}</p>}</div>;
+    {list && <datalist id={lid}>{list.map(o => <option key={o} value={o} />)}</datalist>}{e && <p className="text-badfg text-sm font-semibold mt-1">{e}</p>}</div>;
 }
 const Sel = ({ label, value, onChange, opts }: { label: string; value: string; onChange: (v: string) => void; opts: [string, string][] }) =>
   <div><label className="lbl">{label}</label><select className="inp" value={value} onChange={e => onChange(e.target.value)}><option value="">Nincs megadva</option>{opts.map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select></div>;
@@ -34,7 +34,7 @@ export default function Defects() {
   const shown = defects.filter(d => !st || d.status === st);
 
   const card = (d: Defect) => { const set = (patch: Partial<Defect>) => updateDefect(d.id, patch);
-    return <details key={d.id} open={d.id === (newId ?? focus)} className="bg-white border border-line rounded-md">
+    return <details key={d.id} open={d.id === (newId ?? focus)} className="bg-surface border border-line rounded-md">
       <summary className="p-3 min-h-14 flex items-center gap-2 cursor-pointer"><span className="font-bold">{d.code}</span><span className="flex-1 min-w-0 truncate">{d.title || 'Névtelen hiba'}</span>
         {rname(d.roomId) && <span className="text-sm hidden sm:inline">{rname(d.roomId)}</span>}<span className={`text-xs px-2 py-1 rounded ${SC[d.status]}`}>{d.status}</span></summary>
       <div className="p-3 pt-0 grid sm:grid-cols-2 gap-3">

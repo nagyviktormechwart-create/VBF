@@ -46,16 +46,16 @@ export default function InspectionDetail() {
     <section className="space-y-3">
       <h2 className="text-lg font-semibold">Helyiségek</h2>
       <div className="flex flex-wrap gap-2">
-        {templates.filter(t => !used.has(t.name.toLowerCase())).map(t =>
+        {templates.filter(t => !t.hidden && !used.has(t.name.toLowerCase())).map(t =>
           <button key={t.id} className="btn min-h-11" onClick={() => add(t.name)}><Plus size={16} />{t.name}</button>)}
       </div>
       <form className="flex gap-2" onSubmit={e => { e.preventDefault(); add(name); }}>
         <input className="inp" placeholder="Egyéni helyiségnév" value={name} onChange={e => setName(e.target.value)} />
         <button className="btn btn-primary">Hozzáadás</button>
       </form>
-      {err && <p className="text-bad font-semibold">{err}</p>}
+      {err && <p className="text-badfg font-semibold">{err}</p>}
       {rooms.length === 0 && <p>Adj hozzá legalább egy helyiséget a fenti gombokkal.</p>}
-      <ul className="divide-y divide-line bg-white border border-line rounded-md">
+      <ul className="divide-y divide-line bg-surface border border-line rounded-md">
         {rooms.map((r, i) => <li key={r.id} className="flex items-center gap-2 p-3">
           <Link to={`/felulvizsgalat/${id}/meres?h=${r.id}`} className="flex-1 font-semibold min-h-12 flex items-center gap-2">{r.name}<span className="font-normal text-sm">({counts[r.id] ?? 0} mérési pont)</span></Link>
           <button className="btn" aria-label="Fel" disabled={i === 0} onClick={() => moveRoom(rooms, i, -1)}><ArrowUp size={18} /></button>

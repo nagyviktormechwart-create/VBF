@@ -58,7 +58,7 @@ export default function Visual() {
       <button className="btn btn-primary" onClick={() => setAdding(!adding)}><Plus size={18} />Tételek hozzáadása</button></div>
     <p className="text-sm">Az alap tételek csak javaslatok: egyik sem kötelező, és a lista szakmai felülvizsgálata a te feladatod. Csak azt add hozzá, ami az adott berendezésre vonatkozik.</p>
 
-    {adding && <section className="bg-white border border-line rounded-md p-4 space-y-4">
+    {adding && <section className="bg-surface border border-line rounded-md p-4 space-y-4">
       {CHECK_TEMPLATE.map(g => <div key={g.category}>
         <div className="flex items-center justify-between gap-2 mb-1"><h3 className="font-semibold">{g.category}</h3>
           <button className="btn min-h-10" onClick={() => addChecks(id, g.items.map(title => ({ category: g.category, title })))}>Mind hozzáadása</button></div>
@@ -74,7 +74,7 @@ export default function Visual() {
       <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 text-sm">
         {[['Tétel összesen', checks.length], ['Értékelve', n(c => !!c.result)], ['Még nincs értékelve', n(c => !c.result)], ['Nem megfelelő', n(c => c.result === 'Nem megfelelő')],
           ['Nem alkalmazható / nem vizsgálható', n(c => c.result === 'Nem alkalmazható' || c.result === 'Nem vizsgálható')]].map(([l, v]) =>
-          <div key={l} className="bg-white border border-line rounded-md p-2"><div className="text-2xl font-bold">{v}</div>{l}</div>)}</div>
+          <div key={l} className="bg-surface border border-line rounded-md p-2"><div className="text-2xl font-bold">{v}</div>{l}</div>)}</div>
       <div className="flex gap-2 flex-wrap">{([['mind', 'Mind'], ['nyitott', 'Még nincs értékelve'], ['nem', 'Nem megfelelő']] as const).map(([k, l]) =>
         <button key={k} className={`btn min-h-11 ${filter === k ? 'btn-primary' : ''}`} onClick={() => setFilter(k)}>{l}</button>)}</div>
     </>}
@@ -82,7 +82,7 @@ export default function Visual() {
 
     {cats.map(cat => { const all = checks.filter(c => c.category === cat), list = shown.filter(c => c.category === cat); if (!list.length) return null;
       const open = all.filter(c => !c.result);
-      return <details key={cat} open className="bg-white border border-line rounded-md">
+      return <details key={cat} open className="bg-surface border border-line rounded-md">
         <summary className="p-3 min-h-12 flex flex-wrap items-center justify-between gap-2 cursor-pointer font-semibold">
           <span>{cat} <span className="font-normal text-sm">({all.length - open.length}/{all.length} értékelve)</span></span>
           {open.length > 0 && <button className="btn min-h-10 text-sm" onClick={e => { e.preventDefault(); if (confirm(`A(z) „${cat}” kategória ${open.length} még nem értékelt tételét megfelelőnek jelölöd?`)) open.forEach(c => updateCheck(c.id, { result: 'Megfelelő' })); }}>Nem értékeltek: Megfelelő</button>}
