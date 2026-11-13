@@ -3,10 +3,11 @@ import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useLiveQuery } from 'dexie-react-hooks';
 import FieldPicker, { fieldKey } from './FieldPicker';
 import Photos from './Photos';
+import { categoryOf } from '../fields';
 import { AlertOctagon, AlertTriangle, Camera, Copy, Pencil, Trash2 } from 'lucide-react';
 import { addCatalogItem, createDefect, db, deletePoint, savePoint, RESULTS, valueStatus, type FieldDef, type ValueStatus, type Point, type PointValue } from '../db';
 
-const COLOR: Record<string, string> = { 'Megfelelő': 'bg-ok text-white', 'Nem megfelelő': 'bg-bad text-white', 'Nem értékelhető': 'bg-slate-400 text-white', 'További vizsgálat szükséges': 'bg-amber-400 text-graphite' };
+const COLOR: Record<string, string> = { 'Megfelelő': 'bg-ok text-white', 'Nem megfelelő': 'bg-bad text-white', 'Nem értékelhető': 'bg-slate-400 text-white', 'Nem alkalmazható': 'bg-slate-500 text-white', 'További vizsgálat szükséges': 'bg-amber-400 text-graphite' };
 const nextIdent = (name: string, pts: Point[]) => {
   const n = Math.max(0, ...pts.filter(p => p.elementName.toLowerCase() === name.toLowerCase()).map(p => parseInt(p.identifier.match(/(\d+)\s*$/)?.[1] ?? '0')));
   return `${name} ${String(n + 1).padStart(2, '0')}`;
@@ -65,7 +66,8 @@ export default function Measure() {
       if (fs) { values.push({ label: f.label, unit: f.unit, type: f.type, value: null, status: fs, fieldId: editing ? editing.values.find(v => v.label === f.label)?.fieldId : f.id }); continue; }
       const raw = cur(f).trim(); let value: string | number | null = raw || null;
       if (f.required && !raw) return setErr(`A(z) „${f.label}” mező kitöltése kötelező.`);
-      if (raw && f.type === 'decimal') { value = Number(raw.replace(',', '.')); if (Number.isNaN(value)) return setErr(`A(z) „${f.label}” mezőbe számot adj meg.`); }
+      if (raw && f.type === 'decimal' && /^[<>]=?\s*\d/.test(raw)) value = raw.replace(',', '.').replace(/\s+/g, '');   // pl. „>999”: határérték-jellegű eredmény
+      else if (raw && f.type === 'decimal') { value = Number(raw.replace(',', '.')); if (Number.isNaN(value)) return setErr(`A(z) „${f.label}” mezőbe számot adj meg.`); }
       values.push({ label: f.label, unit: f.unit, type: f.type, value, status: value === null ? 'hiányzik' : 'rögzítve', fieldId: editing ? editing.values.find(v => v.label === f.label)?.fieldId : f.id });
     }
     let catalogId = editing?.catalogId ?? el?.id;
@@ -117,7 +119,7 @@ export default function Measure() {
         {f.type === 'bool' || f.type === 'select'
           ? <select className="inp" disabled={!!fstat[f.id]} value={cur(f)} onChange={e => setVal(f, e.target.value)}><option value="">Nincs megadva</option>
               {(f.type === 'bool' ? ['Igen', 'Nem'] : f.options ?? []).map(o => <option key={o}>{o}</option>)}</select>
-          : <input className="inp" disabled={!!fstat[f.id]} type={f.type === 'date' ? 'date' : 'text'} inputMode={f.type === 'decimal' ? 'decimal' : 'text'} value={cur(f)}
+          : <input className="inp" disabled={!!fstat[f.id]} type={f.type === 'date' ? 'date' : 'text'} inputMode={f.type === 'decimal' && categoryOf(f) !== 'ÁVK-vizsgálatok' ? 'decimal' : 'text'} value={cur(f)}
               list={f.type === 'text' ? 'sg-' + f.id : undefined} onChange={e => setVal(f, e.target.value)} />}
         {f.type === 'text' && <datalist id={'sg-' + f.id}>{[...new Set([...(f.options ?? []), ...(sugg[f.label] ?? [])])].map(o => <option key={o} value={o} />)}</datalist>}
         {f.note && <p className="text-xs mt-1">{f.note}</p>}

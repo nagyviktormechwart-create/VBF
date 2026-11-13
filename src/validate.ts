@@ -22,6 +22,9 @@ export function validateBundle(B: Bundle): Issue[] {
 
   if (!insp.inspector.trim()) add(W, 'NINCS_FELULVIZSGALO', 'Felülvizsgálat', insp.id, insp.name, 'A felülvizsgáló neve nincs megadva.');
   if (!insp.network?.system) add(W, 'HALOZATI_RENDSZER', 'Hálózati adatok', insp.id, insp.name, 'A hálózati rendszer nincs megadva.');
+  if (!insp.overallResult) add(I, 'NINCS_OSSZESITETT_MINOSITES', 'Felülvizsgálat', insp.id, insp.name, 'Az összesített minősítés még nincs megadva.');
+  else if (insp.overallResult === 'MEGFELELŐ' && (points.some(p => BAD.includes(p.result)) || checks.some(c => c.result === 'Nem megfelelő') || defects.some(d => OPEN.includes(d.status))))
+    add(W, 'ELLENTMONDAS_OSSZESITETT', 'Felülvizsgálat', insp.id, insp.name, 'Az összesített minősítés „MEGFELELŐ”, de van nem megfelelő eredmény vagy nyitott hiba.');
   if (points.length && !instruments.length) add(W, 'NINCS_MUSZER', 'Mérőműszer', insp.id, insp.name, 'Van mérési pont, de nincs mérőműszer megadva.');
   for (const m of instruments) if (!m.calDate) add(I, 'MUSZER_KALIBRALAS', 'Mérőműszer', m.id, [m.manufacturer, m.type].filter(Boolean).join(' '), 'Nincs kalibrálási / ellenőrzési dátum megadva.');
 

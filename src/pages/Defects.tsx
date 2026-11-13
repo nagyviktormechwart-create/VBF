@@ -4,6 +4,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { Plus, Trash2 } from 'lucide-react';
 import { createDefect, db, deleteDefect, updateDefect, DEFECT_STATUSES, type Defect } from '../db';
 import Photos from './Photos';
+import { DEFECT_SEVERITY_SUGGESTIONS } from '../doctemplates';
 
 const SC: Record<string, string> = { 'Nyitott': 'bg-bad text-white', 'Javítás alatt': 'bg-amber-400 text-graphite', 'Javítva': 'bg-ok text-white', 'Utóellenőrzés szükséges': 'bg-amber-400 text-graphite', 'Lezárva': 'bg-slate-500 text-white' };
 
@@ -28,7 +29,7 @@ export default function Defects() {
   const points = q(() => db.points.where('inspectionId').equals(id).toArray());
   const checks = q(() => db.checks.where('inspectionId').equals(id).sortBy('order'));
   const all = useLiveQuery(() => db.defects.toArray(), []) ?? [];
-  const sugg = (k: 'severity' | 'category') => [...new Set(all.map(d => d[k]).filter(Boolean))];
+  const sugg = (k: 'severity' | 'category') => [...new Set([...(k === 'severity' ? DEFECT_SEVERITY_SUGGESTIONS : []), ...all.map(d => d[k]).filter(Boolean)])];
   const [st, setSt] = useState(''); const [newId, setNewId] = useState<string | null>(null);
   const rname = (rid?: string) => rooms.find(r => r.id === rid)?.name;
   const shown = defects.filter(d => !st || d.status === st);

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { usePwa } from '../pwa';
 import { CatalogInfo, DataManagement, DefaultUnits, RoomSuggestions } from './SettingsExtra';
 import { useTheme, type ThemeMode } from '../theme';
@@ -88,6 +89,10 @@ export default function Settings() {
       </div>
     </section>
 
+    <section className="bg-surface border border-line rounded-md p-4 space-y-2">
+      <h2 className="font-semibold">Szövegsablonok a jegyzőkönyvhöz</h2>
+      <p className="text-sm">A minősítő irat, az útmutató, a jogszabály- és szabványlista állandó szövegei, szerkeszthetően.</p>
+      <Link to="/szovegsablonok" className="btn inline-flex">Megnyitás: Szövegsablonok</Link></section>
     <CatalogInfo />
     <RoomSuggestions />
     <DefaultUnits />

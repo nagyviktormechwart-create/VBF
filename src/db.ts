@@ -10,6 +10,8 @@ export interface Inspection {
   client: string; inspector: string; date: string; type: string; notes: string;
   status: Status; createdAt: number; updatedAt: number; network?: NetworkData;
   // 3. fázis: kiegészítő ingatlan-/felülvizsgálati adatok (opcionálisak)
+  workNumber?: string; parcelNumber?: string; contactPerson?: string; duration?: string; inspectionMode?: string; generalRegulation?: string; basicProtection?: string;
+  overallResult?: string; nextInspectionDate?: string; inspectorFireCert?: string; protections?: Record<string, string[]>;
   inspectorQualification?: string; inspectorLicense?: string; inspectorContact?: string; signaturePlace?: string; signatureDate?: string;
   clientAddress?: string; clientContact?: string; location?: string; legalBasis?: string; usage?: string; assetId?: string; scope?: string;
 }
@@ -24,7 +26,7 @@ export type DefectStatus = typeof DEFECT_STATUSES[number];
 export interface Defect { id: string; inspectionId: string; seq: number; code: string; title: string; description: string; category: string; severity: string;
   roomId?: string; boardId?: string; circuitId?: string; pointId?: string; checkId?: string; action: string; repairNeeded: '' | 'Igen' | 'Nem';
   status: DefectStatus; repairDate: string; recheck: string; note: string; createdAt: number; updatedAt: number }
-export type PhotoOwner = 'point' | 'check' | 'defect';
+export type PhotoOwner = 'point' | 'check' | 'defect' | 'instrument' | 'inspection';
 // A kép adatai külön táblában (photoData) vannak, így a listák és az export gyors; a képek JPEG data URL-ként tárolódnak (a JSON-mentés is tartalmazza őket).
 export interface Photo { id: string; inspectionId: string; ownerType: PhotoOwner; ownerId: string; seq: number; code: string; name: string; mime: string;
   width: number; height: number; size: number; thumb: string; caption: string; createdAt: number }
@@ -34,7 +36,7 @@ export interface Board { id: string; inspectionId: string; identifier: string; n
 export interface Circuit { id: string; inspectionId: string; boardId: string; identifier: string; name: string; function: string; protType: string;
   characteristic: string; current: string; poles: string; breaking: string; cableMaterial: string; crossSection: string; phases: string;
   note: string; order: number; createdAt: number }
-export interface Room { id: string; inspectionId: string; name: string; order: number; createdAt: number }
+export interface Room { id: string; inspectionId: string; name: string; order: number; createdAt: number; area?: string }
 export interface RoomTemplate { id: string; name: string; custom: boolean; hidden?: boolean }
 // A kategória, lista, alapérték, kötelező jelleg és megjegyzés opcionális: a régi mezők változatlanul működnek.
 export type FieldType = 'decimal' | 'text' | 'date' | 'bool' | 'select';
@@ -47,7 +49,7 @@ export interface PointValue { label: string; unit: string; type: FieldType; valu
 export const valueStatus = (v: PointValue): ValueStatus => v.status ?? (v.value === null || v.value === '' ? 'hiányzik' : 'rögzítve');
 export interface Point { id: string; inspectionId: string; roomId: string; catalogId?: string; elementName: string; identifier: string;
   values: PointValue[]; boardId?: string; circuitId?: string; result: string; note: string; createdAt: number; updatedAt: number }
-export const RESULTS = ['Megfelelő', 'Nem megfelelő', 'Nem értékelhető', 'További vizsgálat szükséges'];
+export const RESULTS = ['Megfelelő', 'Nem megfelelő', 'Nem értékelhető', 'További vizsgálat szükséges', 'Nem alkalmazható'];
 export const CATEGORIES = ['Dugaljak és kapcsolók', 'Világítás', 'Elosztók és védelem', 'Földelés és EPH', 'Egyéb berendezés'];
 export interface Setting { key: string; value: unknown }
 
@@ -296,7 +298,7 @@ export const updatePhoto = (id: string, patch: Partial<Photo>) => tracked(() => 
 export const deletePhoto = (id: string) => tracked(() => db.transaction('rw', [db.photos, db.photoData], async () => { await db.photoData.delete(id); await db.photos.delete(id); }));
 
 export const saveInstrument = (i: Omit<Instrument, 'createdAt'> & { createdAt?: number }) => tracked(() => db.instruments.put({ ...i, createdAt: i.createdAt ?? now() }));
-export const deleteInstrument = (id: string) => tracked(() => db.instruments.delete(id));
+export const deleteInstrument = (id: string) => tracked(() => db.transaction('rw', [db.instruments, db.photos, db.photoData], async () => { await removePhotosOf('instrument', [id]); await db.instruments.delete(id); }));
 
 // Beállítások: helyiségjavaslatok, alapértelmezett mértékegységek, adatkezelés
 export const addRoomTemplate = (name: string) => tracked(async () => {
@@ -326,3 +328,11 @@ export const removeDefaultUnit = (label: string) => tracked(async () => { const 
 
 // Minden adat törlése (a felület előtte mentést készít és megerősítést kér); utána az alap katalógus újra feltöltődik.
 export const wipeAll = () => tracked(async () => { await db.transaction('rw', db.tables, async () => { for (const t of db.tables) await t.clear(); }); await seed(); });
+
+export const setRoomArea = (id: string, area: string) => tracked(() => db.rooms.update(id, { area: area.trim() || undefined }));
+
+// Szövegsablonok: csak a módosított szöveg kerül az adatbázisba, az alapszöveg a kódban van.
+export const DOC_TEMPLATES_KEY = 'docTemplates';
+export async function getDocTemplateOverrides(): Promise<Record<string, string>> { return ((await db.settings.get(DOC_TEMPLATES_KEY))?.value as Record<string, string> | undefined) ?? {}; }
+export const setDocTemplate = (key: string, text: string) => tracked(async () => { const m = await getDocTemplateOverrides(); m[key] = text; await db.settings.put({ key: DOC_TEMPLATES_KEY, value: m }); });
+export const resetDocTemplate = (key: string) => tracked(async () => { const m = await getDocTemplateOverrides(); delete m[key]; await db.settings.put({ key: DOC_TEMPLATES_KEY, value: m }); });

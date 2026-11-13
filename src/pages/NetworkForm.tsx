@@ -8,7 +8,7 @@ const GROUPS: { title: string; fields: F[] }[] = [
   { title: 'Hálózati rendszer és paraméterek', fields: [
     { k: 'system', label: 'Hálózati rendszer', kind: 'select', opts: ['TN-C', 'TN-S', 'TN-C-S', 'TT', 'IT', 'Egyéb', 'Nem ismert'] },
     { k: 'phases', label: 'Fázisok száma', kind: 'num' },
-    { k: 'voltage', label: 'Névleges hálózati feszültség (V)', kind: 'num' },
+    { k: 'voltage', label: 'Névleges hálózati feszültség (V, pl. 400/230)', kind: 'text' },
     { k: 'frequency', label: 'Névleges frekvencia (Hz)', kind: 'num' }] },
   { title: 'Betáplálás', fields: [
     { k: 'feedMode', label: 'Betáplálás módja', kind: 'text' },

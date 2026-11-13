@@ -10,6 +10,7 @@ const BY_LABEL: Record<string, string> = {
   'ÁVK kioldóáram': G3, 'ÁVK típusa': G3, 'ÁVK névleges hibaárama': G3, 'ÁVK pólusszáma': G3,
   'Védelmi készülék típusa': G4, 'Védelmi készülék karakterisztikája': G4, 'Védelmi készülék pólusszáma': G4, 'Védelmi készülék megszakítóképessége': G4, 'Névleges áram': G4,
   'Névleges feszültség': G5, 'Betáplálás': G5, 'Elosztó azonosítója': G5, 'PE/N állapot': G5, 'Áramkör azonosítója': G5, 'Áramkör megnevezése': G5,
+  'Érintésvédelmi osztály': G2, 'V.v.F. (védővezető folytonos)': G2, 'ÁVK kioldóáram 0°': G3, 'ÁVK kioldóáram 180°': G3, 'Mért feszültség': G0, 'Állapot (szemrevételezés)': G7,
   'Vezető anyaga': G6, 'Vezető keresztmetszete': G6, 'Mérési módszer': G7, 'Mérési körülmények': G7, 'Mérési megjegyzés': G7 };
 
 // A mező csoportja: a megadott kategória, ennek hiányában a név alapján, végül „Egyéb mérési adatok”.
@@ -28,5 +29,7 @@ export const LIBRARY: FieldDef[] = [
   mk('ÁVK kioldási idő', 'ms'), ...TRIP.map(t => mk('ÁVK kioldási idő ' + t, 'ms')), mk('ÁVK kioldóáram', 'mA'),
   mk('Védelmi készülék karakterisztikája', '', 'text', ['B', 'C', 'D', 'K', 'Z', 'gG']), mk('Védelmi készülék pólusszáma', '', 'text', ['1', '2', '3', '4']),
   mk('Védelmi készülék megszakítóképessége', 'kA'), mk('Mérési módszer', '', 'text'), mk('Mérési körülmények', '', 'text'), mk('Mérési megjegyzés', '', 'text'),
+  mk('Érintésvédelmi osztály', '', 'select', ['0.', 'I.', 'II.', 'III.']), mk('V.v.F. (védővezető folytonos)', '', 'select', ['✓', '×', 'NA']),
+  mk('Állapot (szemrevételezés)', '', 'select', ['Ép', 'Sérült']), mk('Mért feszültség', 'V'), mk('ÁVK kioldóáram 0°', 'mA'), mk('ÁVK kioldóáram 180°', 'mA'),
   mk('Vizsgált csatlakozási pont', '', 'text'), mk('Egyéb vezető folytonossága', 'Ω'),
 ];

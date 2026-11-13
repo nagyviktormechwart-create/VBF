@@ -4,6 +4,7 @@ import { categoryOf } from './fields';
 import { CHECK_CATEGORIES } from './checklist';
 import { loadBundle } from './data';
 import { pointState, validateBundle } from './validate';
+import { PROTECTION_GROUPS } from './protections';
 
 const NA = 'Nincs megadva';
 const FILL: Record<string, string> = { 'Megfelelő': 'FFC6EFCE', 'Nem megfelelő': 'FFFFC7CE', 'Nem értékelhető': 'FFD9D9D9', 'További vizsgálat szükséges': 'FFFFEB9C',
@@ -39,7 +40,7 @@ const AVK_ORDER = ['ÁVK típusa', 'ÁVK névleges hibaárama', 'ÁVK pólusszá
 export async function exportInspection(id: string) {
   const B = await loadBundle(id); if (!B) return;
   const { insp, rooms, points, boards, circuits, checks, defects, photos, instruments } = B;
-  const rname = new Map(rooms.map(r => [r.id, r.name])); const bm = new Map(boards.map(b => [b.id, b])); const cm = new Map(circuits.map(c => [c.id, c]));
+  const rname = new Map(rooms.map(r => [r.id, r.name])); const rarea = new Map(rooms.map(r => [r.id, r.area ?? ''])); const bm = new Map(boards.map(b => [b.id, b])); const cm = new Map(circuits.map(c => [c.id, c]));
   const pm = new Map(points.map(p => [p.id, p])); const km = new Map(checks.map(c => [c.id, c])); const dm = new Map(defects.map(d => [d.id, d]));
   const bid = (x: { boardId?: string }) => (x.boardId && bm.get(x.boardId)?.identifier) || NA;
   const cid = (x: { circuitId?: string }) => (x.circuitId && cm.get(x.circuitId)?.identifier) || NA;
@@ -48,22 +49,25 @@ export async function exportInspection(id: string) {
   const wb = new ExcelJS.Workbook();
 
   // 1–2. Ingatlan és felülvizsgálat
-  kv(wb, 'INGATLAN ADATAI', [['Projekt neve', insp.name], ['Ingatlan megnevezése', insp.property], ['Ingatlan címe', insp.address], ['Épülettípus', insp.buildingType],
+  kv(wb, 'INGATLAN ADATAI', [['Projekt neve', insp.name], ['Ingatlan megnevezése', insp.property], ['Ingatlan címe', insp.address], ['Helyrajzi szám (hrsz.)', insp.parcelNumber ?? ''], ['Épülettípus', insp.buildingType],
     ['Épület vagy berendezés azonosítója', insp.assetId ?? ''], ['Az ingatlan használatának jellege', insp.usage ?? ''], ['Megrendelő', insp.client], ['Megrendelő címe', insp.clientAddress ?? ''],
     ['Megrendelő elérhetősége', insp.clientContact ?? ''], ['Általános megjegyzések', insp.notes]]);
-  kv(wb, 'FELÜLVIZSGÁLAT ADATAI', [['Felülvizsgálat ID', insp.id], ['Projekt állapota', insp.status], ['Felülvizsgálat dátuma', insp.date], ['Felülvizsgálat típusa', insp.type],
+  kv(wb, 'FELÜLVIZSGÁLAT ADATAI', [['Felülvizsgálat ID', insp.id], ['Munkaszám', insp.workNumber ?? ''], ['Projekt állapota', insp.status], ['Felülvizsgálat dátuma', insp.date], ['Felülvizsgálat típusa', insp.type], ['A felülvizsgálat időtartama', insp.duration ?? ''], ['Vizsgálat módja', insp.inspectionMode ?? ''], ['Általános előírás(ok)', insp.generalRegulation ?? ''],
+    ['Alapvető érintésvédelmi mód', insp.basicProtection ?? ''], ['Kapcsolattartó neve', insp.contactPerson ?? ''], ['Összesített minősítés', insp.overallResult ?? ''], ['Legközelebbi vizsgálat időpontja', insp.nextInspectionDate ?? ''],
     ['Felülvizsgálat helyszíne', insp.location ?? ''], ['A vizsgálat megrendelésének / jogalapjának megjelölése', insp.legalBasis ?? ''], ['A felülvizsgálat terjedelme', insp.scope ?? ''],
-    ['Felülvizsgáló neve', insp.inspector], ['Felülvizsgáló szakképesítése', insp.inspectorQualification ?? ''], ['Jogosultság vagy képesítés azonosítója', insp.inspectorLicense ?? ''],
+    ['Felülvizsgáló neve', insp.inspector], ['Felülvizsgáló szakképesítése', insp.inspectorQualification ?? ''], ['VBF bizonyítvány száma / jogosultság azonosítója', insp.inspectorLicense ?? ''], ['Tűzvédelmi szakvizsga bizonyítvány száma', insp.inspectorFireCert ?? ''],
     ['Felülvizsgáló elérhetősége', insp.inspectorContact ?? ''], ['Aláírás helye', insp.signaturePlace ?? ''], ['Aláírás dátuma', insp.signatureDate ?? ''],
     ['Projekt létrehozva', new Date(insp.createdAt)], ['Projekt utolsó módosítása', new Date(insp.updatedAt)], ['Exportálás időpontja', new Date()], ['Export szerkezetének verziója', '2']]);
 
   // 3–5. Hálózat, elosztók, áramkörök
   const nw = insp.network ?? {};
-  const NW: [string, string | undefined, boolean][] = [['Hálózati rendszer', nw.system, false], ['Fázisok száma', nw.phases, true], ['Névleges hálózati feszültség (V)', nw.voltage, true],
+  const NW: [string, string | undefined, boolean][] = [['Hálózati rendszer', nw.system, false], ['Fázisok száma', nw.phases, true], ['Névleges hálózati feszültség (V)', nw.voltage, false],
     ['Névleges frekvencia (Hz)', nw.frequency, true], ['Betáplálás módja', nw.feedMode, false], ['Betáplálás megnevezése', nw.feedName, false], ['Főbiztosító típusa', nw.mainFuseType, false],
     ['Főbiztosító névleges árama (A)', nw.mainFuseCurrent, true], ['Főbiztosító pólusszáma', nw.mainFusePoles, false], ['Fő földelőkapocs adatai', nw.mainEarthTerminal, false],
     ['Földelési rendszerre vonatkozó megjegyzés', nw.earthingNote, false], ['Hálózati kialakítás megjegyzése', nw.networkNote, false]];
   kv(wb, 'HÁLÓZATI ADATOK', NW.map(([k, v, n]) => [k, n ? num(v ?? '') ?? '' : v ?? '']));
+  const sel = insp.protections ?? {};
+  sheet(wb, 'VÉDELMI MÓDOK', ['Csoport', 'Tétel', 'Kiválasztva'], PROTECTION_GROUPS.flatMap(g => g.items.map(i => [g.title, i, (sel[g.key] ?? []).includes(i) ? 'Igen' : 'Nem'])), [60, 70, 12]);
   sheet(wb, 'ELOSZTÓTÁBLÁK', ['Elosztó ID', 'Elosztó azonosítója', 'Elosztó megnevezése', 'Elhelyezkedése', 'Betáplálás megnevezése', 'Névleges feszültség (V)', 'Főkapcsoló adatai',
     'Fő védelmi készülék adatai', 'Megjegyzés', 'Áramkörök száma', 'Mérési pontok száma'],
     boards.map(b => [b.id, b.identifier, b.name, b.location, b.feed, num(b.voltage), b.mainSwitch, b.mainProtection, b.note,
@@ -74,18 +78,18 @@ export async function exportInspection(id: string) {
       num(c.breaking), c.cableMaterial, num(c.crossSection), c.phases, c.note, points.filter(p => p.circuitId === c.id).length]), [38, 38, 16, 16, 24, 22, 22, 18, 12, 10, 14, 12, 14, 12, 30, 12]);
 
   // 6. Helyiségek
-  sheet(wb, 'HELYISÉGEK', ['Helyiség ID', 'Sorszám', 'Helyiség neve', 'Mérési pontok száma', 'Szemrevételezési tételek száma', 'Hibák száma'],
-    rooms.map((r, i) => [r.id, i + 1, r.name, points.filter(p => p.roomId === r.id).length, checks.filter(c => c.roomId === r.id).length, defects.filter(d => d.roomId === r.id).length]), [38, 10, 28, 14, 18, 12]);
+  sheet(wb, 'HELYISÉGEK', ['Helyiség ID', 'Sorszám', 'Helyiség neve', 'Mérési pontok száma', 'Szemrevételezési tételek száma', 'Hibák száma', 'Épület / terület'],
+    rooms.map((r, i) => [r.id, i + 1, r.name, points.filter(p => p.roomId === r.id).length, checks.filter(c => c.roomId === r.id).length, defects.filter(d => d.roomId === r.id).length, r.area || NA]), [38, 10, 28, 14, 18, 12, 24]);
 
   // 7. Mérési pontok (egy sor pontonként)
   const pws = sheet(wb, 'MÉRÉSI PONTOK', ['Mérési pont ID', 'Sorszám', 'Helyiség ID', 'Helyiség', 'Mérési pont azonosítója', 'Mérési elem típusa', 'Katalógus elem ID', 'Elosztó ID', 'Elosztó',
     'Áramkör ID', 'Áramkör', 'Minősítés', 'Állapot', 'Mért mezők száma', 'Hiányzó értékek száma', 'Nem végezhető / nem alkalmazható mezők száma', 'Fényképek száma', 'Kapcsolódó hibák',
-    'Megjegyzés', 'Létrehozva', 'Módosítva'],
+    'Megjegyzés', 'Létrehozva', 'Módosítva', 'Épület / terület'],
     points.map((p, i) => { const st = p.values.map(valueStatus);
       return [p.id, i + 1, p.roomId, room(p.roomId), p.identifier, p.elementName, p.catalogId ?? NA, p.boardId ?? NA, bid(p), p.circuitId ?? NA, cid(p), p.result || 'Nincs értékelve', pointState(p),
         st.filter(s => s === 'rögzítve').length, st.filter(s => s === 'hiányzik').length, st.filter(s => s !== 'rögzítve' && s !== 'hiányzik').length,
-        photos.filter(f => f.ownerType === 'point' && f.ownerId === p.id).length, defOf(p.id), p.note, new Date(p.createdAt), new Date(p.updatedAt)]; }),
-    [38, 9, 38, 20, 28, 26, 38, 38, 14, 38, 14, 22, 34, 10, 12, 16, 10, 16, 36, 18, 18]);
+        photos.filter(f => f.ownerType === 'point' && f.ownerId === p.id).length, defOf(p.id), p.note, new Date(p.createdAt), new Date(p.updatedAt), rarea.get(p.roomId) || NA]; }),
+    [38, 9, 38, 20, 28, 26, 38, 38, 14, 38, 14, 22, 34, 10, 12, 16, 10, 16, 36, 18, 18, 20]);
   pws.getColumn(20).numFmt = 'yyyy-mm-dd hh:mm'; pws.getColumn(21).numFmt = 'yyyy-mm-dd hh:mm'; colour(pws, 12);
 
   // 8. Mérési eredmények (széles táblázat, dinamikus mezőoszlopokkal)
@@ -134,6 +138,8 @@ export async function exportInspection(id: string) {
   // 13–14. Fényképek, mérőműszerek
   const owner = (f: { ownerType: string; ownerId: string }): [string, string] => {
     if (f.ownerType === 'point') { const p = pm.get(f.ownerId); return ['Mérési pont', p ? `${room(p.roomId)} – ${p.identifier}` : NA]; }
+    if (f.ownerType === 'instrument') { const m = instruments.find(i => i.id === f.ownerId); return ['Mérőműszer bizonylata', m ? [m.manufacturer, m.type, m.serial && `(${m.serial})`].filter(Boolean).join(' ') : NA]; }
+    if (f.ownerType === 'inspection') return ['Felülvizsgálati melléklet', insp.name];
     if (f.ownerType === 'check') return ['Szemrevételezési tétel', km.get(f.ownerId)?.title ?? NA];
     const d = dm.get(f.ownerId); return ['Hiba', d ? `${d.code} – ${d.title}` : NA];
   };

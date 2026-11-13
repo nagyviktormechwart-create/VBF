@@ -5,7 +5,7 @@ import { AlertTriangle, Camera, ChevronDown, ChevronRight } from 'lucide-react';
 import { db, RESULTS } from '../db';
 import { EMPTY_FILTERS, filterPoints, filtersActive, isComplete, missingCount, NO_RESULT, stats, type Filters } from '../overview';
 
-const COLOR: Record<string, string> = { 'Megfelelő': 'bg-ok text-white', 'Nem megfelelő': 'bg-bad text-white', 'Nem értékelhető': 'bg-slate-400 text-white', 'További vizsgálat szükséges': 'bg-amber-400 text-graphite', [NO_RESULT]: 'bg-steel text-ink border border-line' };
+const COLOR: Record<string, string> = { 'Megfelelő': 'bg-ok text-white', 'Nem megfelelő': 'bg-bad text-white', 'Nem értékelhető': 'bg-slate-400 text-white', 'Nem alkalmazható': 'bg-slate-500 text-white', 'További vizsgálat szükséges': 'bg-amber-400 text-graphite', [NO_RESULT]: 'bg-steel text-ink border border-line' };
 const PAGE = 100;
 
 export default function Overview() {
@@ -59,7 +59,7 @@ export default function Overview() {
       return <section key={r.id} className="bg-surface border border-line rounded-md">
         <button className="w-full text-left p-3 min-h-14 flex items-center gap-2" aria-expanded={o} onClick={() => setOpen({ ...open, [r.id]: !o })}>
           {o ? <ChevronDown size={20} /> : <ChevronRight size={20} />}
-          <span className="font-bold flex-1 min-w-0 truncate">{r.name}</span>
+          <span className="font-bold flex-1 min-w-0 truncate">{r.name}{r.area && <span className="font-normal text-sm"> · {r.area}</span>}</span>
           <span className="text-sm">{active ? `${list.length} / ` : ''}{rs.total} pont · {rs.complete} kitöltött ({rs.pct}%)</span>
           <span className="hidden sm:block w-24 h-2 bg-steel rounded-full overflow-hidden"><span className="block h-full bg-ok" style={{ width: rs.pct + '%' }} /></span></button>
         {o && <ul className="divide-y divide-line border-t border-line">

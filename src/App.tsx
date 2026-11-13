@@ -7,6 +7,7 @@ import Defects from './pages/Defects';
 import Instruments from './pages/Instruments';
 import Overview from './pages/Overview';
 import Search from './pages/Search';
+import Templates from './pages/Templates';
 import Measure from './pages/Measure';
 import Settings from './pages/Settings';
 import { Moon, Sun, Search as SearchIcon, Gauge, Boxes, Settings as Cog, PlusSquare, ClipboardList, Check, Loader2 } from 'lucide-react';
@@ -71,6 +72,7 @@ export default function App() {
             <Route path="/uj" element={<NewInspection />} />
             <Route path="/felulvizsgalatok" element={<Inspections />} />
             <Route path="/beallitasok" element={<Settings />} />
+            <Route path="/szovegsablonok" element={<Templates />} />
             <Route path="/kereses" element={<Search />} />
             <Route path="/katalogus" element={<Catalog />} />
             <Route path="/felulvizsgalat/:id/elosztok" element={<Boards />} />

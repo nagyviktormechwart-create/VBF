@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { Pencil, Plus, Trash2 } from 'lucide-react';
 import { db, deleteInstrument, saveInstrument, type Instrument } from '../db';
+import Photos from './Photos';
 import RecordForm, { type RF } from './RecordForm';
 
 const F: RF[] = [{ k: 'manufacturer', label: 'Gyártó' }, { k: 'type', label: 'Típus', required: true }, { k: 'serial', label: 'Gyári szám' }, { k: 'deviceId', label: 'Műszer azonosítója' },
@@ -34,7 +35,8 @@ export default function Instruments() {
         <div className="flex-1 min-w-0"><div className="font-semibold">{[i.manufacturer, i.type].filter(Boolean).join(' ')}</div>
           <div className="text-sm">{[i.serial && `Gyári szám: ${i.serial}`, i.deviceId && `Azonosító: ${i.deviceId}`, i.calDate && `Kalibrálás/ellenőrzés: ${i.calDate}`, i.calDoc].filter(Boolean).join(' · ') || 'Nincs több adat megadva'}</div></div>
         <button className="btn" aria-label="Szerkesztés" onClick={() => setEdit(i.id)}><Pencil size={18} /></button>
-        <button className="btn btn-danger" aria-label="Törlés" onClick={() => { if (confirm('Törlöd a műszert ebből a felülvizsgálatból?')) deleteInstrument(i.id); }}><Trash2 size={18} /></button></div>}
+        <button className="btn btn-danger" aria-label="Törlés" onClick={() => { if (confirm('Törlöd a műszert és a hozzá csatolt bizonylat-képeket ebből a felülvizsgálatból?')) deleteInstrument(i.id); }}><Trash2 size={18} /></button></div>}
+      {edit !== i.id && <details className="mt-2"><summary className="cursor-pointer text-sm font-semibold min-h-10 flex items-center">Kalibrálási bizonylat (képek)</summary><div className="pt-2"><Photos inspectionId={id} ownerType="instrument" ownerId={i.id} /></div></details>}
     </li>)}</ul>
   </div>;
 }

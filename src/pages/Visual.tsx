@@ -4,7 +4,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import Photos from './Photos';
 import { AlertOctagon, Copy, MessageSquare, Pencil, Plus, Trash2 } from 'lucide-react';
 import { addChecks, createDefect, CHECK_RESULTS, db, deleteCheck, updateCheck, type Check } from '../db';
-import { CHECK_CATEGORIES, CHECK_TEMPLATE } from '../checklist';
+import { CHECK_CATEGORIES, CHECK_TEMPLATE, REPORT_TEMPLATE } from '../checklist';
 
 const COLOR: Record<string, string> = { 'Megfelelő': 'bg-ok text-white', 'Nem megfelelő': 'bg-bad text-white', 'Nem alkalmazható': 'bg-slate-500 text-white', 'Nem vizsgálható': 'bg-amber-400 text-graphite' };
 
@@ -45,7 +45,7 @@ function Row({ c }: { c: Check }) {
 export default function Visual() {
   const { id = '' } = useParams();
   const checks = useLiveQuery(() => db.checks.where('inspectionId').equals(id).sortBy('order'), [id]) ?? [];
-  const [filter, setFilter] = useState<'mind' | 'nyitott' | 'nem'>('mind'); const [adding, setAdding] = useState(false);
+  const [filter, setFilter] = useState<'mind' | 'nyitott' | 'nem'>('mind'); const [adding, setAdding] = useState(false); const [tpl, setTpl] = useState<'alap' | 'jegyzokonyv'>('alap');
   const [cc, setCc] = useState(CHECK_CATEGORIES[0]); const [ct, setCt] = useState('');
   const n = (f: (c: Check) => boolean) => checks.filter(f).length;
   const shown = checks.filter(c => filter === 'mind' || (filter === 'nyitott' ? !c.result : c.result === 'Nem megfelelő'));
@@ -59,7 +59,10 @@ export default function Visual() {
     <p className="text-sm">Az alap tételek csak javaslatok: egyik sem kötelező, és a lista szakmai felülvizsgálata a te feladatod. Csak azt add hozzá, ami az adott berendezésre vonatkozik.</p>
 
     {adding && <section className="bg-surface border border-line rounded-md p-4 space-y-4">
-      {CHECK_TEMPLATE.map(g => <div key={g.category}>
+      <div className="flex gap-2 flex-wrap"><button className={`btn min-h-11 ${tpl === 'alap' ? 'btn-primary' : ''}`} onClick={() => setTpl('alap')}>Alap javaslatok</button>
+        <button className={`btn min-h-11 ${tpl === 'jegyzokonyv' ? 'btn-primary' : ''}`} onClick={() => setTpl('jegyzokonyv')}>MSZ HD 60364-6 jegyzőkönyv szerinti lista</button></div>
+      {tpl === 'jegyzokonyv' && <p className="text-xs">A mintajegyzőkönyvből átvett tételek. A szöveget és a hivatkozásokat ellenőrizd, a tételek átnevezhetők.</p>}
+      {(tpl === 'alap' ? CHECK_TEMPLATE : REPORT_TEMPLATE).map(g => <div key={g.category}>
         <div className="flex items-center justify-between gap-2 mb-1"><h3 className="font-semibold">{g.category}</h3>
           <button className="btn min-h-10" onClick={() => addChecks(id, g.items.map(title => ({ category: g.category, title })))}>Mind hozzáadása</button></div>
         <div className="flex flex-wrap gap-2">{g.items.map(t => <button key={t} disabled={have.has(`${g.category}|${t}`.toLowerCase())} className="btn min-h-11 text-sm disabled:opacity-40"

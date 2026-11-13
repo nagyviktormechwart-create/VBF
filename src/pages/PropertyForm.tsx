@@ -3,15 +3,23 @@ import { ChevronDown } from 'lucide-react';
 import { BUILDING_TYPES, updateInspection, type Inspection } from '../db';
 
 type R = Record<string, string | undefined>;
-const FIELDS: { k: string; label: string; kind?: 'select' | 'date' | 'area'; req?: boolean }[] = [
-  { k: 'name', label: 'Projekt neve', req: true }, { k: 'property', label: 'Ingatlan megnevezése' }, { k: 'address', label: 'Ingatlan címe', req: true },
-  { k: 'buildingType', label: 'Épülettípus', kind: 'select' }, { k: 'assetId', label: 'Épület vagy berendezés azonosítója' }, { k: 'usage', label: 'Az ingatlan használatának jellege' },
+const FIELDS: { k: string; label: string; kind?: 'select' | 'date' | 'area'; req?: boolean; opts?: string[] }[] = [
+  { k: 'name', label: 'Projekt neve', req: true }, { k: 'workNumber', label: 'Munkaszám' }, { k: 'property', label: 'Ingatlan megnevezése' }, { k: 'address', label: 'Ingatlan címe', req: true },
+  { k: 'parcelNumber', label: 'Helyrajzi szám (hrsz.)' }, { k: 'buildingType', label: 'Épülettípus', kind: 'select', opts: BUILDING_TYPES, req: true },
+  { k: 'assetId', label: 'Épület vagy berendezés azonosítója' }, { k: 'usage', label: 'Az ingatlan használatának jellege' },
   { k: 'client', label: 'Megrendelő neve' }, { k: 'clientAddress', label: 'Megrendelő címe' }, { k: 'clientContact', label: 'Megrendelő elérhetősége' },
-  { k: 'inspector', label: 'Felülvizsgáló neve' }, { k: 'inspectorQualification', label: 'Felülvizsgáló szakképesítése' },
-  { k: 'inspectorLicense', label: 'Jogosultság vagy képesítés azonosítója' }, { k: 'inspectorContact', label: 'Felülvizsgáló elérhetősége' },
-  { k: 'signaturePlace', label: 'Aláírás helye' }, { k: 'signatureDate', label: 'Aláírás dátuma', kind: 'date' }, { k: 'date', label: 'Felülvizsgálat dátuma', kind: 'date', req: true }, { k: 'type', label: 'Felülvizsgálat típusa', req: true },
+  { k: 'contactPerson', label: 'Kapcsolattartó neve (üzemi kísérő vagy a megbízó által kijelölt)' },
+  { k: 'inspector', label: 'Felelős felülvizsgáló neve' }, { k: 'inspectorQualification', label: 'Felülvizsgáló szakképesítése' },
+  { k: 'inspectorLicense', label: 'VBF bizonyítvány száma / jogosultság azonosítója' }, { k: 'inspectorFireCert', label: 'Tűzvédelmi szakvizsga bizonyítvány száma' },
+  { k: 'inspectorContact', label: 'Felülvizsgáló elérhetősége' },
+  { k: 'date', label: 'Felülvizsgálat dátuma', kind: 'date', req: true }, { k: 'duration', label: 'A felülvizsgálat időtartama' }, { k: 'type', label: 'Felülvizsgálat típusa', req: true },
+  { k: 'inspectionMode', label: 'Vizsgálat módja' }, { k: 'generalRegulation', label: 'Általános előírás(ok)' }, { k: 'basicProtection', label: 'Alapvető érintésvédelmi mód' },
   { k: 'location', label: 'Felülvizsgálat helyszíne' }, { k: 'legalBasis', label: 'A vizsgálat megrendelésének vagy jogalapjának megjelölése' },
-  { k: 'scope', label: 'A felülvizsgálat terjedelme', kind: 'area' }, { k: 'notes', label: 'Általános megjegyzések', kind: 'area' }];
+  { k: 'scope', label: 'A felülvizsgálat terjedelme', kind: 'area' },
+  { k: 'overallResult', label: 'Összesített minősítés (a felülvizsgáló döntése)', kind: 'select', opts: ['MEGFELELŐ', 'NEM MEGFELELŐ'] },
+  { k: 'nextInspectionDate', label: 'Legközelebbi vizsgálat időpontja', kind: 'date' },
+  { k: 'signaturePlace', label: 'Kelt: helye' }, { k: 'signatureDate', label: 'Kelt: dátuma', kind: 'date' },
+  { k: 'notes', label: 'Általános megjegyzések', kind: 'area' }];
 
 // Az ingatlan- és felülvizsgálati adatok utólagos szerkesztése, mezőnként automatikus mentéssel.
 export default function PropertyForm({ insp }: { insp: Inspection }) {
@@ -28,8 +36,8 @@ export default function PropertyForm({ insp }: { insp: Inspection }) {
     <div className="p-4 pt-0 grid sm:grid-cols-2 gap-3">{FIELDS.map(f => <div key={f.k} className={f.kind === 'area' ? 'sm:col-span-2' : ''}>
       <label className="lbl">{f.label}{f.req && ' *'}</label>
       {f.kind === 'select'
-        ? <select className="inp" value={v[f.k] ?? ''} onChange={e => { setV({ ...v, [f.k]: e.target.value }); commit(f.k, e.target.value, true); }}>
-            {BUILDING_TYPES.map(b => <option key={b}>{b}</option>)}</select>
+        ? <select className="inp" value={v[f.k] ?? ''} onChange={e => { setV({ ...v, [f.k]: e.target.value }); commit(f.k, e.target.value, f.req); }}>
+            {!f.req && <option value="">Nincs megadva</option>}{(f.opts ?? []).map(b => <option key={b}>{b}</option>)}</select>
         : f.kind === 'area'
           ? <textarea className="inp py-2" rows={2} value={v[f.k] ?? ''} onChange={e => setV({ ...v, [f.k]: e.target.value })} onBlur={e => commit(f.k, e.target.value)} />
           : <input className="inp" type={f.kind === 'date' ? 'date' : 'text'} value={v[f.k] ?? ''} onChange={e => setV({ ...v, [f.k]: e.target.value })} onBlur={e => commit(f.k, e.target.value, f.req)} />}
