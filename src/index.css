@@ -438,13 +438,11 @@ main div.flex.flex-wrap.gap-2:has(> a.btn.btn-primary) > button.btn:hover { back
    ========================================================================== */
 main:has(> div > .overflow-x-auto.pb-1) { max-width: none; }
 
-/* mérési pontok listája: kompakt, jól érinthető sorok (minden méretben) */
-main > div:has(> .overflow-x-auto.pb-1) li > .flex-1 { flex: 1 1 100%; }
-main > div:has(> .overflow-x-auto.pb-1) li > .btn {
-  min-height: 2.75rem; min-width: 2.75rem; padding: 0 .7rem; border-radius: 12px;
-}
-main > div:has(> .overflow-x-auto.pb-1) li > .btn:first-of-type { margin-left: auto; }
-main > div:has(> .overflow-x-auto.pb-1) li { padding: .875rem 1rem; gap: .5rem; }
+/* mérési pontok listája: azonosító + minősítés fent, alatta egyenlő szélességű, jól érinthető műveletgombok */
+main > div:has(> .overflow-x-auto.pb-1) li { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: .5rem; align-items: center; padding: .875rem 1rem; }
+main > div:has(> .overflow-x-auto.pb-1) li > .flex-1, main > div:has(> .overflow-x-auto.pb-1) li > .basis-full { grid-column: 1 / -1; }
+main > div:has(> .overflow-x-auto.pb-1) li > span.rounded { grid-column: 1 / -1; justify-self: start; }
+main > div:has(> .overflow-x-auto.pb-1) li > .btn { min-width: 0; width: 100%; padding: 0; min-height: 2.75rem; border-radius: 12px; }
 main > div:has(> .overflow-x-auto.pb-1) li > .flex-1 > div.font-semibold:not(.text-xs) { font-size: 1.0625rem; }
 main > div:has(> .overflow-x-auto.pb-1) .overflow-x-auto .btn { border-radius: 999px; }
 
@@ -475,7 +473,7 @@ main > div:has(> .overflow-x-auto.pb-1) section:nth-of-type(1) { border-top: 3px
   main > div:has(> .overflow-x-auto.pb-1) > section:nth-of-type(1) { grid-column: 1; }
   main > div:has(> .overflow-x-auto.pb-1) > section:nth-of-type(2) {
     grid-column: 2; grid-row: 3; position: sticky; top: 4.75rem;
-    max-height: calc(100dvh - 5.75rem); overflow-y: auto; overscroll-behavior: contain;
+    max-height: calc(100vh - 5.75rem); max-height: calc(100dvh - 5.75rem); overflow-y: auto; overscroll-behavior: contain;
     padding-right: 2px; scrollbar-width: thin;
   }
 }
@@ -484,7 +482,7 @@ main > div:has(> .overflow-x-auto.pb-1) section:nth-of-type(1) { border-top: 3px
   main > div:has(> .overflow-x-auto.pb-1) { grid-template-columns: 13.5rem minmax(0, 1fr) minmax(20rem, 23.5rem); }
   main > div:has(> .overflow-x-auto.pb-1) > .overflow-x-auto {
     grid-column: 1; grid-row: 2 / span 2; flex-direction: column; overflow: visible; gap: .5rem;
-    position: sticky; top: 4.75rem; max-height: calc(100dvh - 5.75rem); overflow-y: auto; padding: 0 2px 2px 0;
+    position: sticky; top: 4.75rem; max-height: calc(100vh - 5.75rem); max-height: calc(100dvh - 5.75rem); overflow-y: auto; padding: 0 2px 2px 0;
   }
   main > div:has(> .overflow-x-auto.pb-1) > .overflow-x-auto::before {
     content: 'Helyiségek'; font-size: .8125rem; font-weight: 650; color: var(--vn-muted); padding: 2px 6px 4px;
@@ -528,11 +526,25 @@ select[aria-label='Mező állapota'] {
 :root[data-focus] .vn-bar a { display: none; }
 :root[data-focus] .vn-bar { justify-content: flex-end; }
 :root[data-focus] main > div:has(> .overflow-x-auto.pb-1) section:nth-of-type(1) > div:last-child { bottom: .75rem; }
-@media (min-width: 1100px) {
-  :root[data-focus] main > div:has(> .overflow-x-auto.pb-1) { grid-template-columns: 13.5rem minmax(0, 1fr) minmax(20rem, 23.5rem); }
+/* Munkamód: 2 oszlop már 760 px-től (iPad 10,2" álló = 810 px), 3 oszlop 1000 px-től (fekvő = 1080 px) */
+@media (min-width: 760px) {
+  :root[data-focus] main > div:has(> .overflow-x-auto.pb-1) {
+    display: grid; grid-template-columns: minmax(0, 1fr) minmax(16.5rem, 18rem); gap: .875rem 1rem; align-items: start;
+  }
+  :root[data-focus] main > div:has(> .overflow-x-auto.pb-1) > * { margin: 0 !important; }
+  :root[data-focus] main > div:has(> .overflow-x-auto.pb-1) > .vn-bar { grid-column: 1 / -1; }
+  :root[data-focus] main > div:has(> .overflow-x-auto.pb-1) > .overflow-x-auto { grid-column: 1 / -1; padding-bottom: 4px; }
+  :root[data-focus] main > div:has(> .overflow-x-auto.pb-1) > section:nth-of-type(1) { grid-column: 1; }
+  :root[data-focus] main > div:has(> .overflow-x-auto.pb-1) > section:nth-of-type(2) {
+    grid-column: 2; grid-row: 3; position: sticky; top: 3.75rem;
+    max-height: calc(100vh - 4.75rem); max-height: calc(100dvh - 4.75rem); overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin;
+  }
+}
+@media (min-width: 1000px) {
+  :root[data-focus] main > div:has(> .overflow-x-auto.pb-1) { grid-template-columns: 11.5rem minmax(0, 1fr) minmax(18rem, 20rem); }
   :root[data-focus] main > div:has(> .overflow-x-auto.pb-1) > .overflow-x-auto {
     grid-column: 1; grid-row: 2 / span 2; flex-direction: column; overflow: visible; gap: .5rem;
-    position: sticky; top: 4.75rem; max-height: calc(100dvh - 5.75rem); overflow-y: auto; padding: 0 2px 2px 0;
+    position: sticky; top: 4.75rem; max-height: calc(100vh - 5.75rem); max-height: calc(100dvh - 5.75rem); overflow-y: auto; padding: 0 2px 2px 0;
   }
   :root[data-focus] main > div:has(> .overflow-x-auto.pb-1) > .overflow-x-auto::before {
     content: 'Helyiségek'; font-size: .8125rem; font-weight: 650; color: var(--vn-muted); padding: 2px 6px 4px;
@@ -542,6 +554,9 @@ select[aria-label='Mező állapota'] {
   }
   :root[data-focus] main > div:has(> .overflow-x-auto.pb-1) > section:nth-of-type(1) { grid-column: 2; grid-row: 2 / span 2; }
   :root[data-focus] main > div:has(> .overflow-x-auto.pb-1) > section:nth-of-type(2) { grid-column: 3; grid-row: 2 / span 2; }
+}
+@media (min-width: 1340px) {
+  :root[data-focus] main > div:has(> .overflow-x-auto.pb-1) { grid-template-columns: 13.5rem minmax(0, 1fr) minmax(20rem, 23.5rem); }
 }
 
 
