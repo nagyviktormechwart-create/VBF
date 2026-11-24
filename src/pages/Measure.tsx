@@ -4,10 +4,11 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import FieldPicker, { fieldKey } from './FieldPicker';
 import Photos from './Photos';
 import { categoryOf } from '../fields';
-import { AlertOctagon, AlertTriangle, Camera, Copy, Pencil, Trash2 } from 'lucide-react';
+import { AlertOctagon, AlertTriangle, Camera, Copy, Maximize2, Minimize2, Pencil, Trash2 } from 'lucide-react';
 import { addCatalogItem, createDefect, db, deletePoint, savePoint, RESULTS, valueStatus, type FieldDef, type ValueStatus, type Point, type PointValue } from '../db';
 
 const COLOR: Record<string, string> = { 'Megfelelő': 'bg-ok text-white', 'Nem megfelelő': 'bg-bad text-white', 'Nem értékelhető': 'bg-slate-400 text-white', 'Nem alkalmazható': 'bg-slate-500 text-white', 'További vizsgálat szükséges': 'bg-amber-400 text-graphite' };
+const RKEY: Record<string, string> = { 'Megfelelő': 'ok', 'Nem megfelelő': 'bad', 'Nem értékelhető': 'ne', 'Nem alkalmazható': 'na', 'További vizsgálat szükséges': 'more' };
 const nextIdent = (name: string, pts: Point[]) => {
   const n = Math.max(0, ...pts.filter(p => p.elementName.toLowerCase() === name.toLowerCase()).map(p => parseInt(p.identifier.match(/(\d+)\s*$/)?.[1] ?? '0')));
   return `${name} ${String(n + 1).padStart(2, '0')}`;
@@ -16,11 +17,27 @@ const nextIdent = (name: string, pts: Point[]) => {
 export default function Measure() {
   const { id = '' } = useParams(); const [sp] = useSearchParams(); const nav = useNavigate();
   const [photoOpen, setPhotoOpen] = useState<string | null>(null);
+  // Munkamód: a felület kereteit (oldalsáv, alsó sáv) elrejti, a mérés teljes képernyőt kap. Kilépéskor mindig visszaáll.
+  const [focus, setFocus] = useState(false);
+  useEffect(() => {
+    const root = document.documentElement;
+    if (focus) root.dataset.focus = '1'; else delete root.dataset.focus;
+    const esc = (e: KeyboardEvent) => { if (focus && e.key === 'Escape' && !document.querySelector('[role="dialog"]')) setFocus(false); };
+    addEventListener('keydown', esc);
+    return () => { removeEventListener('keydown', esc); delete root.dataset.focus; };
+  }, [focus]);
+  const fieldsRef = useRef<HTMLDivElement>(null); const [tick, setTick] = useState(0);
+  useEffect(() => { if (tick) fieldsRef.current?.querySelector<HTMLElement>('.inp:not([disabled])')?.focus(); }, [tick]);
   const pc = useLiveQuery(async () => { const m: Record<string, number> = {}; (await db.photos.where('inspectionId').equals(id).toArray()).forEach(x => { if (x.ownerType === 'point') m[x.ownerId] = (m[x.ownerId] ?? 0) + 1; }); return m; }, [id]) ?? {};
   const rooms = useLiveQuery(() => db.rooms.where('inspectionId').equals(id).sortBy('order'), [id]) ?? [];
   const boards = useLiveQuery(() => db.boards.where('inspectionId').equals(id).sortBy('order'), [id]) ?? [];
   const circuits = useLiveQuery(() => db.circuits.where('inspectionId').equals(id).sortBy('order'), [id]) ?? [];
   const catalog = useLiveQuery(() => db.catalog.toArray(), []) ?? [];
+  // Helyiségenkénti haladás: pontok száma, plusz jelzés, ha van nem megfelelő vagy hiányos pont.
+  const stat = useLiveQuery(async () => { const m: Record<string, { n: number; bad: number; miss: number }> = {};
+    for (const p of await db.points.where('inspectionId').equals(id).toArray()) { const s = (m[p.roomId] ??= { n: 0, bad: 0, miss: 0 }); s.n++;
+      if (p.result === 'Nem megfelelő') s.bad++; else if (p.values.some(v => valueStatus(v) === 'hiányzik')) s.miss++; }
+    return m; }, [id]) ?? {};
   const [roomId, setRoomId] = useState(sp.get('h') ?? '');
   const [elName, setElName] = useState(''); const [override, setOverride] = useState<string | null>(null);
   const [vals, setVals] = useState<Record<string, string>>({}); const [result, setResult] = useState('Megfelelő'); const [note, setNote] = useState('');
@@ -74,7 +91,7 @@ export default function Measure() {
     if (!el && !editing && saveCat) catalogId = await addCatalogItem(name, 'Egyéb berendezés', newFields);
     await savePoint({ id: editing?.id ?? crypto.randomUUID(), createdAt: editing?.createdAt, inspectionId: id, roomId: room.id, catalogId,
       elementName: name, identifier: ident.trim(), values, boardId: boardId || undefined, circuitId: circuitId || undefined, result, note });
-    reset();
+    reset(); if (!editing) setTick(t => t + 1);
   }
   async function defect(p: Point) {
     const ex = await db.defects.where('inspectionId').equals(id).filter(d => d.pointId === p.id).first();
@@ -89,13 +106,19 @@ export default function Measure() {
 
   if (rooms.length === 0) return <p>Ehhez a felülvizsgálathoz még nincs helyiség. <Link className="underline" to={`/felulvizsgalat/${id}`}>Helyiségek hozzáadása</Link></p>;
   return <div className="space-y-4">
-    <Link to={`/felulvizsgalat/${id}`} className="underline text-sm">← Vissza a felülvizsgálathoz</Link>
+    <div className="vn-bar">
+      <Link to={`/felulvizsgalat/${id}`} className="underline text-sm">← Vissza a felülvizsgálathoz</Link>
+      <button type="button" className="btn min-h-10 px-3 text-sm" aria-pressed={focus} onClick={() => setFocus(!focus)}
+        title={focus ? 'Kilépés a munkamódból (Esc)' : 'Munkamód: teljes képernyős mérés'}>
+        {focus ? <Minimize2 size={16} /> : <Maximize2 size={16} />}{focus ? 'Kilépés a munkamódból' : 'Munkamód'}</button>
+    </div>
     <div className="flex gap-2 overflow-x-auto pb-1">{rooms.map(r => <button key={r.id} onClick={() => { setRoomId(r.id); reset(); }}
-      className={`btn shrink-0 ${r.id === room?.id ? 'btn-primary' : ''}`}>{r.name}</button>)}</div>
+      className={`btn vn-room shrink-0 ${r.id === room?.id ? 'btn-primary' : ''}`}>{r.name}
+      {stat[r.id] ? <span className="vn-count" data-flag={stat[r.id].bad ? 'bad' : stat[r.id].miss ? 'warn' : ''} title={`${stat[r.id].n} mérési pont${stat[r.id].bad ? `, ebből ${stat[r.id].bad} nem megfelelő` : ''}${stat[r.id].miss ? `, ${stat[r.id].miss} hiányos` : ''}`}>{stat[r.id].n}</span> : null}</button>)}</div>
 
     <section className="bg-surface border border-line rounded-md p-4 space-y-3">
       <h2 className="font-semibold">{editing ? 'Mérési pont szerkesztése' : 'Új mérési pont'} – {room?.name}</h2>
-      <div className="flex flex-wrap gap-2">{enabled.filter(c => c.favorite).map(c => <button key={c.id} className="btn min-h-11" onClick={() => { setElName(c.name); setOverride(null); setNewFields([]); setFieldOv(null); }}>{c.name}</button>)}</div>
+      <div className="flex flex-wrap gap-2">{enabled.filter(c => c.favorite).map(c => <button key={c.id} className="btn min-h-11" onClick={() => { setElName(c.name); setOverride(null); setNewFields([]); setFieldOv(null); setTick(t => t + 1); }}>{c.name}</button>)}</div>
       <div><label className="lbl">Mérési elem (keresés vagy új név beírása)</label>
         <input className="inp" list="els" value={elName} disabled={!!editing} onChange={e => { setElName(e.target.value); setOverride(null); setNewFields([]); setFieldOv(null); }} />
         <datalist id="els">{enabled.map(c => <option key={c.id} value={c.name} />)}</datalist></div>
@@ -111,7 +134,11 @@ export default function Measure() {
       {name && (el || editing) && <details className="border border-line rounded-md"><summary className="p-3 min-h-12 cursor-pointer font-semibold">Mérési mezők módosítása ehhez a ponthoz</summary>
         <div className="p-3 pt-0 space-y-2"><FieldPicker value={fields} onChange={setFieldOv} locked={locked} />
           {fieldOv && <button className="btn" onClick={() => setFieldOv(null)}>Vissza az alapmezőkhöz</button>}</div></details>}
-      <div className="grid sm:grid-cols-2 gap-3">{fields.map(f => <div key={f.id}>
+      <div ref={fieldsRef} className="grid sm:grid-cols-2 gap-3" onKeyDown={e => {
+        if (e.key !== 'Enter' || e.shiftKey || (e.target as HTMLElement).tagName !== 'INPUT') return;
+        const list = [...e.currentTarget.querySelectorAll<HTMLElement>('.inp:not([disabled])')]; const i = list.indexOf(e.target as HTMLElement);
+        if (i < 0) return; e.preventDefault(); if (i < list.length - 1) list[i + 1].focus(); else save();
+      }}>{fields.map((f, fi) => <div key={f.id}>
         <div className="flex items-center justify-between gap-2"><label className="lbl">{f.label}{f.unit && ` (${f.unit})`}</label>
           <select aria-label="Mező állapota" className="text-xs border border-line rounded bg-surface min-h-8 mb-1" value={fstat[f.id] ?? ''}
             onChange={e => { setFstat({ ...fstat, [f.id]: e.target.value as ValueStatus | '' }); if (e.target.value) setVals({ ...vals, [f.id]: '' }); }}>
@@ -119,13 +146,14 @@ export default function Measure() {
         {f.type === 'bool' || f.type === 'select'
           ? <select className="inp" disabled={!!fstat[f.id]} value={cur(f)} onChange={e => setVal(f, e.target.value)}><option value="">Nincs megadva</option>
               {(f.type === 'bool' ? ['Igen', 'Nem'] : f.options ?? []).map(o => <option key={o}>{o}</option>)}</select>
-          : <input className="inp" disabled={!!fstat[f.id]} type={f.type === 'date' ? 'date' : 'text'} inputMode={f.type === 'decimal' && categoryOf(f) !== 'ÁVK-vizsgálatok' ? 'decimal' : 'text'} value={cur(f)}
+          : <input className="inp" disabled={!!fstat[f.id]} type={f.type === 'date' ? 'date' : 'text'} inputMode={f.type === 'decimal' && categoryOf(f) !== 'ÁVK-vizsgálatok' ? 'decimal' : 'text'} enterKeyHint={fi === fields.length - 1 ? 'done' : 'next'} value={cur(f)}
               list={f.type === 'text' ? 'sg-' + f.id : undefined} onChange={e => setVal(f, e.target.value)} />}
         {f.type === 'text' && <datalist id={'sg-' + f.id}>{[...new Set([...(f.options ?? []), ...(sugg[f.label] ?? [])])].map(o => <option key={o} value={o} />)}</datalist>}
         {f.note && <p className="text-xs mt-1">{f.note}</p>}
         {f.label === 'Várható zárlati áram' && fields.some(x => x.label === 'Vonali impedancia') && <p className="text-xs mt-1">Automatikusan számolva: 230 V / vonali impedancia (kézzel is átírható).</p>}</div>)}</div>
-      <div><label className="lbl">Minősítés</label><select className="inp" value={result} onChange={e => setResult(e.target.value)}>
-        <option value="">Nincs megadva</option>{RESULTS.map(r => <option key={r}>{r}</option>)}</select></div>
+      <div><label className="lbl" id="lbl-result">Minősítés</label>
+        <div className="vn-segs" role="radiogroup" aria-labelledby="lbl-result">{[...RESULTS, ''].map(r => <button key={r || 'none'} type="button" role="radio" aria-checked={result === r}
+          className="vn-seg" data-k={RKEY[r] ?? 'none'} onClick={() => setResult(r)}>{r || 'Nincs megadva'}</button>)}</div></div>
       <div><label className="lbl">Megjegyzés</label><textarea className="inp py-2" rows={2} value={note} onChange={e => setNote(e.target.value)} /></div>
       {err && <p className="text-badfg font-semibold">{err}</p>}
       <div className="flex gap-2"><button className="btn btn-primary flex-1" onClick={save}>{editing ? 'Módosítás mentése' : 'Mérési pont mentése'}</button>
