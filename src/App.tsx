@@ -8,6 +8,7 @@ import Instruments from './pages/Instruments';
 import Overview from './pages/Overview';
 import Search from './pages/Search';
 import Templates from './pages/Templates';
+import AvkTest from './pages/AvkTest';
 import Measure from './pages/Measure';
 import Settings from './pages/Settings';
 import { Moon, Sun, Search as SearchIcon, Gauge, Boxes, Settings as Cog, PlusSquare, ClipboardList, Check, Loader2 } from 'lucide-react';
@@ -77,6 +78,7 @@ export default function App() {
             <Route path="/katalogus" element={<Catalog />} />
             <Route path="/felulvizsgalat/:id/elosztok" element={<Boards />} />
             <Route path="/felulvizsgalat/:id/szemrevetelezes" element={<Visual />} />
+            <Route path="/felulvizsgalat/:id/avk" element={<AvkTest />} />
             <Route path="/felulvizsgalat/:id/hibak" element={<Defects />} />
             <Route path="/felulvizsgalat/:id/muszerek" element={<Instruments />} />
             <Route path="/felulvizsgalat/:id/attekintes" element={<Overview />} />

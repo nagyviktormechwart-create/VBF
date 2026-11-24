@@ -1,6 +1,6 @@
-import { db, type Board, type Check, type Circuit, type Defect, type Inspection, type Instrument, type Photo, type Point, type Room } from './db';
+import { db, type AvkTest, type Board, type Check, type Circuit, type Defect, type Inspection, type Instrument, type Photo, type Point, type Room } from './db';
 
-export interface Bundle { insp: Inspection; rooms: Room[]; points: Point[]; boards: Board[]; circuits: Circuit[]; checks: Check[]; defects: Defect[]; photos: Photo[]; instruments: Instrument[] }
+export interface Bundle { insp: Inspection; rooms: Room[]; points: Point[]; boards: Board[]; circuits: Circuit[]; checks: Check[]; defects: Defect[]; photos: Photo[]; instruments: Instrument[]; avkTests: AvkTest[] }
 
 // Egy felülvizsgálat összes adata egyben (a képek tartalma nélkül), az export és az ellenőrzés közös alapja.
 export async function loadBundle(id: string): Promise<Bundle | undefined> {
@@ -12,5 +12,6 @@ export async function loadBundle(id: string): Promise<Bundle | undefined> {
     boards: await db.boards.where('inspectionId').equals(id).sortBy('order'), circuits: await db.circuits.where('inspectionId').equals(id).sortBy('order'),
     checks: await db.checks.where('inspectionId').equals(id).sortBy('order'), defects: await db.defects.where('inspectionId').equals(id).sortBy('seq'),
     photos: await db.photos.where('inspectionId').equals(id).sortBy('seq'),
+    avkTests: await db.avkTests.where('inspectionId').equals(id).toArray(),
     instruments: (await db.instruments.where('inspectionId').equals(id).toArray()).sort((a, b) => a.createdAt - b.createdAt) };
 }

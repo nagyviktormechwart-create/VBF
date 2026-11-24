@@ -41,6 +41,7 @@ const RULES: Record<string, z.ZodTypeAny> = {
   catalog: z.object({ id, name: z.string(), fields: z.array(z.unknown()) }).passthrough(),
   roomTemplates: z.object({ id, name: z.string() }).passthrough(),
   boards: z.object({ id, inspectionId: z.string(), identifier: z.string() }).passthrough(),
+  avkTests: z.object({ id, inspectionId: z.string(), circuitId: z.string() }).passthrough(),
   circuits: z.object({ id, inspectionId: z.string(), boardId: z.string(), identifier: z.string() }).passthrough(),
   checks: z.object({ id, inspectionId: z.string(), category: z.string(), title: z.string() }).passthrough(),
   defects: z.object({ id, inspectionId: z.string(), title: z.string() }).passthrough(),

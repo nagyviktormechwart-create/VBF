@@ -8,7 +8,7 @@ import { Download, Upload } from 'lucide-react';
 import { db, tracked } from '../db';
 import { analyzeBackup, applyBackup, downloadBackup, parseBackup, type Backup } from '../backup';
 
-const LABEL: Record<string, string> = { inspections: 'felülvizsgálat', rooms: 'helyiség', points: 'mérési pont', catalog: 'katalóguselem', boards: 'elosztó', circuits: 'áramkör', checks: 'ellenőrzési tétel', defects: 'hiba', photos: 'fénykép', instruments: 'mérőműszer', roomTemplates: 'helyiségjavaslat', settings: 'beállítás' };
+const LABEL: Record<string, string> = { inspections: 'felülvizsgálat', rooms: 'helyiség', points: 'mérési pont', catalog: 'katalóguselem', boards: 'elosztó', circuits: 'áramkör', checks: 'ellenőrzési tétel', avkTests: 'ÁVK teszt', defects: 'hiba', photos: 'fénykép', instruments: 'mérőműszer', roomTemplates: 'helyiségjavaslat', settings: 'beállítás' };
 
 function Storage() {
   const { installEvent, offlineReady } = usePwa();

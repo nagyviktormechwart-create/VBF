@@ -1,10 +1,9 @@
 import { AlignmentType, Document, Footer, Header, ImageRun, Packer, PageNumber, PageOrientation, Paragraph, ShadingType, Table, TableCell, TableLayoutType, TableRow, TextRun, VerticalAlign, WidthType } from 'docx';
-import { db, getDocTemplateOverrides, valueStatus, type Photo, type Point, type PointValue } from './db';
+import { db, getDocTemplateOverrides, isAvkCircuit, valueStatus, type Photo, type Point, type PointValue } from './db';
 import { loadBundle, type Bundle } from './data';
 import { DOC_TEMPLATES } from './doctemplates';
 import { PROTECTION_GROUPS } from './protections';
 import { CHECK_CATEGORIES } from './checklist';
-import { categoryOf } from './fields';
 
 export interface ReportOptions { photos: boolean; attachments: boolean }
 type Img = { data: Uint8Array; width: number; height: number };
@@ -146,19 +145,23 @@ export async function buildReport(B: Bundle, tx: (k: string) => string, loadPhot
   const meas: (Paragraph | Table)[] = [par('MÉRÉSI JEGYZŐKÖNYV', { bold: true, size: 26, after: 120 }),
     inRoomOrder.length ? table(W1, rows1, 15) : par('Nincs rögzített mérési pont.')];
 
-  // 7. ÁVK-vizsgálatok (fekvő)
-  const avkPts = inRoomOrder.filter(p => p.values.some(v => categoryOf(v) === 'ÁVK-vizsgálatok'));
+  // 7. Áram-védőkapcsolók működésének ellenőrzése (fekvő): az „ÁVK teszt” adataiból, ÁVK típusú áramkörönként egy sor
   const W2 = fit([700, 1500, 1600, 650, 650, 700, 700, 850, 700, 700, 700, 700, 950, 700, 700, 700, 700], LW);
-  const a4 = (p: Point, ang: string): Cell[] => [show(get(p, `ÁVK kioldóáram ${ang}`)), show(get(p, `ÁVK kioldási idő 1x ${ang}`)), show(get(p, `ÁVK kioldási idő 5x ${ang}`)), show(get(p, `ÁVK kioldási idő 1/2x ${ang}`))];
+  const bIdx = new Map(boards.map((x, i) => [x.id, i]));
+  const avkCircuits = circuits.filter(isAvkCircuit).sort((x, y) => (bIdx.get(x.boardId) ?? 0) - (bIdx.get(y.boardId) ?? 0) || x.order - y.order);
+  const tests = new Map(B.avkTests.map(t => [t.circuitId, t]));
+  const tv = (v?: string): Cell => (v?.trim() ? { t: v.trim(), align: AlignmentType.CENTER } : { runs: [run('?', { size: 14, bold: true, color: 'C00000' })], align: AlignmentType.CENTER });
   const rows2: Row[] = [{ header: true, cells: ['', '', '', '', '', '', '', '', { t: '0°', span: 4, align: AlignmentType.CENTER }, '', { t: '180°', span: 4, align: AlignmentType.CENTER }] },
     { header: true, cells: ['Sorszám', 'Helye', 'Jele', 'Típus', 'In [A]', 'IΔn [mA]', 'Un [V]', 'Pólusszám', 'IΔn [mA]', 't [ms] IΔn', 't [ms] 5xIΔn', 't [ms] 0.5xIΔn', 'Minősítés', 'IΔn [mA]', 't [ms] IΔn', 't [ms] 5xIΔn', 't [ms] 0.5xIΔn'].map(t => ({ t, align: AlignmentType.CENTER })) }];
-  let k = 0, lastRoom = '';
-  for (const p of avkPts) {
-    if (p.roomId !== lastRoom) { lastRoom = p.roomId; rows2.push({ fill: GREY, cells: [{ t: rname.get(p.roomId)?.name ?? '', span: 17, bold: true }] }); }
-    rows2.push({ cells: [{ t: `${++k}.`, align: AlignmentType.CENTER }, (p.boardId && bm.get(p.boardId)?.identifier) || rname.get(p.roomId)?.name || '', p.identifier, show(get(p, 'ÁVK típusa')), show(get(p, 'Névleges áram')),
-      show(get(p, 'ÁVK névleges hibaárama')), show(get(p, 'Névleges feszültség')), show(get(p, 'ÁVK pólusszáma')), ...a4(p, '0°'), resCell(p.result), ...a4(p, '180°')] as Cell[] });
+  let k = 0, lastLoc: string | undefined = undefined;
+  for (const c of avkCircuits) {
+    const bd = bm.get(c.boardId); const t = tests.get(c.id); const loc = bd?.location?.trim() ?? '';
+    if (loc && loc !== lastLoc) rows2.push({ fill: GREY, cells: [{ t: loc, span: 17, bold: true }] });
+    lastLoc = loc;
+    rows2.push({ cells: [{ t: `${++k}.`, align: AlignmentType.CENTER }, bd?.identifier ?? '', c.identifier, tv(t?.type), tv(t?.nominalCurrent), tv(t?.residual), tv(t?.voltage), tv(t?.poles),
+      tv(t?.i0), tv(t?.t1_0), tv(t?.t5_0), tv(t?.t05_0), resCell(t?.result ?? ''), tv(t?.i180), tv(t?.t1_180), tv(t?.t5_180), tv(t?.t05_180)] as Cell[] });
   }
-  const avk: (Paragraph | Table)[] = avkPts.length ? [par('ÁRAM-VÉDŐKAPCSOLÓK MŰKÖDÉSÉNEK ELLENŐRZÉSE', { bold: true, size: 26, after: 120, brk: true }), table(W2, rows2, 14)] : [];
+  const avk: (Paragraph | Table)[] = avkCircuits.length ? [par('ÁRAM-VÉDŐKAPCSOLÓK MŰKÖDÉSÉNEK ELLENŐRZÉSE', { bold: true, size: 26, after: 120, brk: true }), table(W2, rows2, 14)] : [];
 
   // 8. Hibalista, fényképes melléklet, bizonylatok
   const tail: (Paragraph | Table)[] = [title('HIBALISTA', false), defects.length ? table(fit([700, 4400, 1700, 2838], PW), [

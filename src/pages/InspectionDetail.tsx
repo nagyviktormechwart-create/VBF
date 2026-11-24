@@ -41,6 +41,7 @@ export default function InspectionDetail() {
       <Link className="btn btn-primary" to={`/felulvizsgalat/${id}/meres`}>Mérés megkezdése</Link>
       <Link className="btn" to={`/felulvizsgalat/${id}/attekintes`}>Áttekintés</Link>
       <Link className="btn" to={`/felulvizsgalat/${id}/elosztok`}>Elosztók és áramkörök</Link>
+      <Link className="btn" to={`/felulvizsgalat/${id}/avk`}>ÁVK teszt</Link>
       <Link className="btn" to={`/felulvizsgalat/${id}/szemrevetelezes`}>Szemrevételezés</Link>
       <Link className="btn" to={`/felulvizsgalat/${id}/hibak`}>Hibák és hiányosságok</Link>
       <Link className="btn" to={`/felulvizsgalat/${id}/muszerek`}>Mérőműszerek</Link>

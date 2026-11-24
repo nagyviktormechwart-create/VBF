@@ -31,6 +31,10 @@ export type PhotoOwner = 'point' | 'check' | 'defect' | 'instrument' | 'inspecti
 export interface Photo { id: string; inspectionId: string; ownerType: PhotoOwner; ownerId: string; seq: number; code: string; name: string; mime: string;
   width: number; height: number; size: number; thumb: string; caption: string; createdAt: number }
 export interface Instrument { id: string; inspectionId: string; manufacturer: string; type: string; serial: string; deviceId: string; calDoc: string; calDate: string; note: string; createdAt: number }
+// ÁVK teszt: az ÁVK típusú áramkörök (Védelmi készülék típusa = ÁVK) működésének ellenőrzése, a jegyzőkönyv ÁVK-táblázatának adataival.
+export interface AvkTest { id: string; inspectionId: string; circuitId: string; type: string; nominalCurrent: string; residual: string; voltage: string; poles: string;
+  i0: string; t1_0: string; t5_0: string; t05_0: string; i180: string; t1_180: string; t5_180: string; t05_180: string; result: string; createdAt: number; updatedAt: number }
+export const isAvkCircuit = (c: { protType: string }) => /(á|a)vk/i.test(c.protType);
 export interface Board { id: string; inspectionId: string; identifier: string; name: string; location: string; feed: string; voltage: string;
   mainSwitch: string; mainProtection: string; note: string; order: number; createdAt: number }
 export interface Circuit { id: string; inspectionId: string; boardId: string; identifier: string; name: string; function: string; protType: string;
@@ -62,6 +66,7 @@ class VbfDb extends Dexie {
   points!: Table<Point, string>;
   boards!: Table<Board, string>;
   circuits!: Table<Circuit, string>;
+  avkTests!: Table<AvkTest, string>;
   checks!: Table<Check, string>;
   defects!: Table<Defect, string>;
   photos!: Table<Photo, string>;
@@ -81,6 +86,7 @@ class VbfDb extends Dexie {
     this.version(3).stores({ boards: 'id, inspectionId', circuits: 'id, inspectionId, boardId' });
     this.version(4).stores({ checks: 'id, inspectionId, category' });
     this.version(5).stores({ defects: 'id, inspectionId, status', photos: 'id, inspectionId, [ownerType+ownerId]', photoData: 'id, inspectionId', instruments: 'id, inspectionId' });
+    this.version(6).stores({ avkTests: 'id, inspectionId, circuitId' });
   }
 }
 export const db = new VbfDb();
@@ -156,8 +162,8 @@ export const createInspection = (d: Omit<Inspection, 'id' | 'createdAt' | 'updat
 export const updateInspection = (id: string, p: Partial<Inspection>) =>
   tracked(() => db.inspections.update(id, { ...p, updatedAt: now() }));
 export const deleteInspection = (id: string) =>
-  tracked(() => db.transaction('rw', [db.inspections, db.rooms, db.points, db.boards, db.circuits, db.checks, db.defects, db.photos, db.photoData, db.instruments], async () => {
-    for (const t of [db.photoData, db.photos, db.defects, db.instruments]) await (t as Dexie.Table).where('inspectionId').equals(id).delete();
+  tracked(() => db.transaction('rw', [db.inspections, db.rooms, db.points, db.boards, db.circuits, db.checks, db.defects, db.photos, db.photoData, db.instruments, db.avkTests], async () => {
+    for (const t of [db.photoData, db.photos, db.defects, db.instruments, db.avkTests]) await (t as Dexie.Table).where('inspectionId').equals(id).delete();
     await db.checks.where('inspectionId').equals(id).delete();
     await db.circuits.where('inspectionId').equals(id).delete();
     await db.boards.where('inspectionId').equals(id).delete();
@@ -230,17 +236,19 @@ export const saveCircuit = (c: Omit<Circuit, 'order' | 'createdAt'> & { order?: 
     await db.inspections.update(c.inspectionId, { updatedAt: now() });
   });
 // Törléskor a hozzárendelt mérési pontok megmaradnak, csak az elosztó-/áramkör-összerendelésük törlődik.
-export const deleteBoard = (id: string) => tracked(() => db.transaction('rw', [db.boards, db.circuits, db.points, db.checks, db.defects], async () => {
+export const deleteBoard = (id: string) => tracked(() => db.transaction('rw', [db.boards, db.circuits, db.points, db.checks, db.defects, db.avkTests], async () => {
   const b = await db.boards.get(id); if (!b) return;
   const cids = new Set((await db.circuits.where('boardId').equals(id).toArray()).map(c => c.id));
+  await db.avkTests.where('circuitId').anyOf([...cids]).delete();
   await unlinkDefects(b.inspectionId, 'boardId', [id]); await unlinkDefects(b.inspectionId, 'circuitId', [...cids]);
   for (const p of (await db.points.where('inspectionId').equals(b.inspectionId).toArray()).filter(p => p.boardId === id || (p.circuitId && cids.has(p.circuitId))))
     await db.points.update(p.id, { boardId: undefined, circuitId: undefined });
   for (const c of (await db.checks.where('inspectionId').equals(b.inspectionId).toArray()).filter(c => c.boardId === id)) await db.checks.update(c.id, { boardId: undefined });
   await db.circuits.where('boardId').equals(id).delete(); await db.boards.delete(id);
 }));
-export const deleteCircuit = (id: string) => tracked(() => db.transaction('rw', [db.circuits, db.points, db.defects], async () => {
+export const deleteCircuit = (id: string) => tracked(() => db.transaction('rw', [db.circuits, db.points, db.defects, db.avkTests], async () => {
   const c = await db.circuits.get(id); if (!c) return;
+  await db.avkTests.where('circuitId').equals(id).delete();
   await unlinkDefects(c.inspectionId, 'circuitId', [id]);
   for (const p of (await db.points.where('inspectionId').equals(c.inspectionId).toArray()).filter(p => p.circuitId === id))
     await db.points.update(p.id, { circuitId: undefined });
@@ -336,3 +344,7 @@ export const DOC_TEMPLATES_KEY = 'docTemplates';
 export async function getDocTemplateOverrides(): Promise<Record<string, string>> { return ((await db.settings.get(DOC_TEMPLATES_KEY))?.value as Record<string, string> | undefined) ?? {}; }
 export const setDocTemplate = (key: string, text: string) => tracked(async () => { const m = await getDocTemplateOverrides(); m[key] = text; await db.settings.put({ key: DOC_TEMPLATES_KEY, value: m }); });
 export const resetDocTemplate = (key: string) => tracked(async () => { const m = await getDocTemplateOverrides(); delete m[key]; await db.settings.put({ key: DOC_TEMPLATES_KEY, value: m }); });
+
+export const saveAvkTest = (t: Omit<AvkTest, 'createdAt' | 'updatedAt'> & { createdAt?: number }) => tracked(async () => {
+  const n = Date.now(); await db.avkTests.put({ ...t, createdAt: t.createdAt ?? n, updatedAt: n }); await db.inspections.update(t.inspectionId, { updatedAt: n });
+});
