@@ -42,7 +42,7 @@ export default function Measure() {
   const [elName, setElName] = useState(''); const [override, setOverride] = useState<string | null>(null);
   const [vals, setVals] = useState<Record<string, string>>({}); const [result, setResult] = useState('Megfelelő'); const [note, setNote] = useState('');
   const [editing, setEditing] = useState<Point | null>(null); const [saveCat, setSaveCat] = useState(true); const [err, setErr] = useState(''); const [boardId, setBoardId] = useState(''); const [circuitId, setCircuitId] = useState(''); const [newFields, setNewFields] = useState<FieldDef[]>([]); const [fieldOv, setFieldOv] = useState<FieldDef[] | null>(null); const [fstat, setFstat] = useState<Record<string, ValueStatus | ''>>({});
-  const room = rooms.find(r => r.id === roomId) ?? rooms[0];
+  const room = rooms.find(r => r.id === roomId) ?? rooms[rooms.length - 1];
   const points = useLiveQuery(() => room ? db.points.where('roomId').equals(room.id).sortBy('createdAt') : [], [room?.id]) ?? [];
   const name = elName.trim();
   const el = catalog.find(c => c.name.toLowerCase() === name.toLowerCase());
@@ -112,7 +112,7 @@ export default function Measure() {
         title={focus ? 'Kilépés a munkamódból (Esc)' : 'Munkamód: teljes képernyős mérés'}>
         {focus ? <Minimize2 size={16} /> : <Maximize2 size={16} />}{focus ? 'Kilépés a munkamódból' : 'Munkamód'}</button>
     </div>
-    <div className="flex gap-2 overflow-x-auto pb-1">{rooms.map(r => <button key={r.id} onClick={() => { setRoomId(r.id); reset(); }}
+    <div className="flex gap-2 overflow-x-auto pb-1">{[...rooms].reverse().map(r => <button key={r.id} onClick={() => { setRoomId(r.id); reset(); }}
       className={`btn vn-room shrink-0 ${r.id === room?.id ? 'btn-primary' : ''}`}>{r.name}
       {stat[r.id] ? <span className="vn-count" data-flag={stat[r.id].bad ? 'bad' : stat[r.id].miss ? 'warn' : ''} title={`${stat[r.id].n} mérési pont${stat[r.id].bad ? `, ebből ${stat[r.id].bad} nem megfelelő` : ''}${stat[r.id].miss ? `, ${stat[r.id].miss} hiányos` : ''}`}>{stat[r.id].n}</span> : null}</button>)}</div>
 

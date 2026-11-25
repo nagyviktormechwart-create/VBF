@@ -70,14 +70,14 @@ export default function InspectionDetail() {
       {err && <p className="text-badfg font-semibold">{err}</p>}
       {rooms.length === 0 && <p>Adj hozzá legalább egy helyiséget a fenti gombokkal.</p>}
       <ul className="divide-y divide-line bg-surface border border-line rounded-md">
-        {rooms.map((r, i) => <li key={r.id} className="flex flex-wrap items-center gap-2 p-3">
+        {[...rooms].reverse().map((r, k) => { const i = rooms.length - 1 - k; return <li key={r.id} className="flex flex-wrap items-center gap-2 p-3">
           <Link to={`/felulvizsgalat/${id}/meres?h=${r.id}`} className="flex-1 font-semibold min-h-12 flex items-center gap-2">{r.name}<span className="font-normal text-sm">({counts[r.id] ?? 0} mérési pont)</span></Link>
           <AreaInput r={r} areas={[...new Set(rooms.map(x => x.area).filter(Boolean) as string[])]} />
-          <button className="btn" aria-label="Fel" disabled={i === 0} onClick={() => moveRoom(rooms, i, -1)}><ArrowUp size={18} /></button>
-          <button className="btn" aria-label="Le" disabled={i === rooms.length - 1} onClick={() => moveRoom(rooms, i, 1)}><ArrowDown size={18} /></button>
+          <button className="btn" aria-label="Fel" disabled={k === 0} onClick={() => moveRoom(rooms, i, 1)}><ArrowUp size={18} /></button>
+          <button className="btn" aria-label="Le" disabled={k === rooms.length - 1} onClick={() => moveRoom(rooms, i, -1)}><ArrowDown size={18} /></button>
           <button className="btn" aria-label="Átnevezés" onClick={() => { const n = prompt('Új név:', r.name); if (n?.trim()) renameRoom(r.id, n); }}><Pencil size={18} /></button>
           <button className="btn btn-danger" aria-label="Törlés" onClick={() => { if (confirm(`Törlöd a(z) „${r.name}” helyiséget?`)) deleteRoom(r.id); }}><Trash2 size={18} /></button>
-        </li>)}
+        </li>; })}
       </ul>
     </section>
   </div>;

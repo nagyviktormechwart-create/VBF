@@ -592,3 +592,110 @@ select[aria-label='Mező állapota'] {
 .vn-count[data-flag='warn'] { background: var(--color-warn); color: #12211c; }
 
 .vn-segs, .vn-bar { scroll-margin-block: 8rem; }
+
+
+/* ==========================================================================
+   Mozgás – csak transform/opacity/clip-path, rövid időtartamok (gyors, nem lassít)
+   Központi szabályzó: a --vn-speed szorzó (1 = alap, 0.6 = gyorsabb, 1.5 = lassabb, 0 = kikapcsolva)
+   ========================================================================== */
+:root {
+  --vn-speed: 1.2;
+  --vn-ease: cubic-bezier(.22, .8, .26, 1);
+  --vn-spring: cubic-bezier(.34, 1.56, .64, 1);
+  --d1: calc(.2s * var(--vn-speed));
+  --d2: calc(.34s * var(--vn-speed));
+  --d3: calc(.55s * var(--vn-speed));
+  --d4: calc(.95s * var(--vn-speed));
+  --st: calc(45ms * var(--vn-speed));          /* egymás utáni elemek lépcsője */
+}
+@keyframes vn-page   { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
+@keyframes vn-rise   { from { opacity: 0; transform: translateY(22px) scale(.985); } to { opacity: 1; transform: none; } }
+@keyframes vn-item   { from { opacity: 0; transform: translateY(-10px) scale(.98); } to { opacity: 1; transform: none; } }
+@keyframes vn-field  { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@keyframes vn-intro  { from { opacity: 0; transform: translateX(-14px); } to { opacity: 1; transform: none; } }
+@keyframes vn-pop    { 0% { transform: scale(.65) rotate(-12deg); } 55% { transform: scale(1.22) rotate(3deg); } 100% { transform: none; } }
+@keyframes vn-pop-soft { 0% { transform: scale(.92); } 60% { transform: scale(1.04); } 100% { transform: none; } }
+@keyframes vn-fade   { from { opacity: 0; } to { opacity: 1; } }
+@keyframes vn-modal  { from { opacity: 0; transform: translateY(22px) scale(.95); } to { opacity: 1; transform: none; } }
+@keyframes vn-reveal { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: none; } }
+@keyframes vn-sweep  { from { background-size: 0% 100%; } to { background-size: 100% 100%; } }
+@keyframes vn-draw   { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
+@keyframes vn-grow   { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+@keyframes vn-num    { from { opacity: 0; transform: translateY(.45em); clip-path: inset(0 0 100% 0); } to { opacity: 1; transform: none; clip-path: inset(0 0 0 0); } }
+
+@media (prefers-reduced-motion: no-preference) {
+  /* --- oldalváltás: az oldal váza belép, a szekciói lépcsőzetesen követik --- */
+  main > * { animation: vn-page var(--d2) var(--vn-ease) backwards; }
+  main > * > * { animation: vn-rise var(--d3) var(--vn-ease) backwards; }
+  main > * > :nth-child(2) { animation-delay: var(--st); }
+  main > * > :nth-child(3) { animation-delay: calc(var(--st) * 2); }
+  main > * > :nth-child(4) { animation-delay: calc(var(--st) * 3); }
+  main > * > :nth-child(5) { animation-delay: calc(var(--st) * 4); }
+  main > * > :nth-child(n+6) { animation-delay: calc(var(--st) * 5); }
+
+  /* --- listák: lépcsőzetes belépés, az új sor (pl. új helyiség) fentről beúszik --- */
+  main li { animation: vn-item var(--d2) var(--vn-ease) backwards; }
+  main li:nth-child(2) { animation-delay: calc(var(--st) * .6); }
+  main li:nth-child(3) { animation-delay: calc(var(--st) * 1.2); }
+  main li:nth-child(4) { animation-delay: calc(var(--st) * 1.8); }
+  main li:nth-child(5) { animation-delay: calc(var(--st) * 2.4); }
+  main li:nth-child(6) { animation-delay: calc(var(--st) * 3); }
+  main li:nth-child(n+7) { animation-delay: calc(var(--st) * 3.6); }
+
+  /* --- mérési mezők: elem váltásakor lépcsőzetesen töltődnek be --- */
+  main .grid.sm\:grid-cols-2 > div { animation: vn-field var(--d2) var(--vn-ease) backwards; }
+  main .grid.sm\:grid-cols-2 > div:nth-child(2) { animation-delay: calc(var(--st) * .5); }
+  main .grid.sm\:grid-cols-2 > div:nth-child(3) { animation-delay: var(--st); }
+  main .grid.sm\:grid-cols-2 > div:nth-child(4) { animation-delay: calc(var(--st) * 1.5); }
+  main .grid.sm\:grid-cols-2 > div:nth-child(n+5) { animation-delay: calc(var(--st) * 2); }
+
+  /* --- oldalsáv: induláskor a logó és a menüpontok egymás után érkeznek --- */
+  aside > div:first-child { animation: vn-pop-soft var(--d3) var(--vn-spring) backwards; }
+  aside a { animation: vn-intro var(--d3) var(--vn-ease) backwards; }
+  aside a:nth-of-type(1) { animation-delay: calc(var(--st) * 1.5); } aside a:nth-of-type(2) { animation-delay: calc(var(--st) * 2.5); }
+  aside a:nth-of-type(3) { animation-delay: calc(var(--st) * 3.5); } aside a:nth-of-type(4) { animation-delay: calc(var(--st) * 4.5); }
+  aside a:nth-of-type(5) { animation-delay: calc(var(--st) * 5.5); }
+
+  /* --- navigáció: az aktív elem háttere végigsöpör, az ikon megugrik --- */
+  aside a, nav.fixed a { transition: background-color var(--d2), color var(--d2), box-shadow var(--d2) var(--vn-ease), transform var(--d2) var(--vn-spring); }
+  aside a svg, nav.fixed a svg { transition: transform var(--d2) var(--vn-spring); }
+  aside a:hover svg, nav.fixed a:hover svg { transform: scale(1.12); }
+  aside a.bg-signal {
+    background: linear-gradient(color-mix(in oklab, var(--vn-lime) 16%, transparent), color-mix(in oklab, var(--vn-lime) 16%, transparent)) left center / 100% 100% no-repeat;
+    animation: vn-sweep var(--d3) var(--vn-ease) backwards;
+  }
+  aside a.bg-signal svg, nav.fixed a.text-mint svg { animation: vn-pop var(--d3) var(--vn-ease); }
+  nav.fixed a.text-mint { transform: translateY(-3px); animation: vn-pop-soft var(--d3) var(--vn-spring); }
+
+  /* --- gombok: gyors benyomódás, rugalmas visszatérés --- */
+  body .btn, .vn-seg { transition: background-color .15s, border-color .15s, box-shadow .15s, transform var(--d3) var(--vn-spring); }
+  body .btn:active, .vn-seg:active { transform: scale(.96); transition: background-color .15s, border-color .15s, box-shadow .15s, transform .08s ease-out; }
+  button[aria-pressed='true'], .overflow-x-auto .btn.btn-primary, .vn-seg[aria-checked='true'] { animation: vn-pop-soft var(--d2) var(--vn-spring); }
+
+  /* --- sorok: a nyíl érintéskor előre mozdul --- */
+  section li > a.flex::after { transition: transform var(--d2) var(--vn-spring), opacity var(--d1); }
+  section li > a.flex:hover::after, section li > a.flex:active::after { transform: translateX(4px); opacity: .85; }
+
+  /* --- irányítópult és számlálók: a számok felemelkednek, a jelzővonal "kirajzolódik" --- */
+  .grid > div:has(> .text-4xl) { animation: vn-rise var(--d3) var(--vn-ease) backwards; }
+  .grid > div:has(> .text-4xl):nth-child(2) { animation-delay: calc(var(--st) * 2); }
+  .text-4xl, .grid > div.bg-surface > .text-2xl { animation: vn-num var(--d3) var(--vn-ease) calc(var(--st) * 3) backwards; }
+  .grid > div:has(> .text-4xl):first-child::after { animation: vn-draw var(--d4) var(--vn-ease) calc(var(--st) * 4) backwards; }
+  main div.flex.flex-wrap.gap-2 > a.btn-primary::after { animation: vn-draw var(--d4) var(--vn-ease) calc(var(--st) * 4) backwards; }
+  main div.flex.flex-wrap.gap-2:has(> a.btn-primary) > a.btn, main div.flex.flex-wrap.gap-2:has(> a.btn-primary) > button.btn { animation: vn-rise var(--d3) var(--vn-ease) backwards; }
+  main div.flex.flex-wrap.gap-2 > :nth-child(2) { animation-delay: var(--st); } main div.flex.flex-wrap.gap-2 > :nth-child(3) { animation-delay: calc(var(--st) * 1.5); }
+  main div.flex.flex-wrap.gap-2 > :nth-child(4) { animation-delay: calc(var(--st) * 2); } main div.flex.flex-wrap.gap-2 > :nth-child(5) { animation-delay: calc(var(--st) * 2.5); }
+  main div.flex.flex-wrap.gap-2 > :nth-child(n+6) { animation-delay: calc(var(--st) * 3); }
+
+  /* --- folyamatjelzők: balról kitöltődnek --- */
+  .h-full.bg-ok { transform-origin: left; animation: vn-grow var(--d4) var(--vn-ease) backwards; transition: width var(--d3) var(--vn-ease); }
+
+  /* --- ablakok, lenyílók, visszajelzések --- */
+  .fixed.inset-0.z-50 { animation: vn-fade var(--d1) ease-out backwards; }
+  .fixed.inset-0.z-50 > .bg-surface { animation: vn-modal var(--d2) var(--vn-spring) backwards; }
+  details[open] > :not(summary) { animation: vn-reveal var(--d2) var(--vn-ease) backwards; }
+  details > summary svg { transition: transform var(--d2) var(--vn-spring); }
+  details > summary:not(.list-none)::after { transition: transform var(--d2) var(--vn-spring); }
+  header.bg-chrome span.flex.items-center.gap-1 svg { animation: vn-pop var(--d3) var(--vn-ease); }
+  .vn-count { transition: background-color var(--d1), transform var(--d2) var(--vn-spring); }
+}
