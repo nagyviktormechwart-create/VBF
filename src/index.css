@@ -712,7 +712,7 @@ select[aria-label='Mező állapota'] {
 }
 @keyframes vn-ripple { to { transform: scale(1); opacity: 0; } }
 
-@keyframes vn-scan   { 0% { transform: translateX(-100%); opacity: 1; } 80% { opacity: 1; } 100% { transform: translateX(100%); opacity: 0; } }
+@keyframes vn-scan   { 0% { clip-path: inset(0 100% 0 0); opacity: 1; } 65% { clip-path: inset(0 0 0 0); opacity: 1; } 100% { clip-path: inset(0 0 0 0); opacity: 0; } }
 @keyframes vn-spin   { from { opacity: 0; transform: rotate(-220deg) scale(.5); } to { opacity: 1; transform: none; } }
 @keyframes vn-wipe   { from { clip-path: inset(0 100% 0 0); transform: translateX(-12px); } to { clip-path: inset(0 0 0 0); transform: none; } }
 @keyframes vn-trace  { 0% { clip-path: inset(0 100% 0 0); } 38% { clip-path: inset(0 0 0 0); } 78% { clip-path: inset(0 0 0 0); } 100% { clip-path: inset(0 0 0 100%); } }
@@ -857,3 +857,10 @@ header.bg-chrome { transition: box-shadow var(--d2), background-color var(--d2);
   /* „Mentve.” pipa kirajzolódik */
   header.bg-chrome span.flex.items-center.gap-1 svg path { stroke-dasharray: 26; animation: vn-check .7s ease-out backwards; }
 }
+
+
+/* Biztonsági háló: semmilyen (akár animációból maradt) elem ne szélesíthesse ki az oldalt vízszintesen */
+@supports (overflow: clip) { html { overflow-x: clip; } }
+
+/* keskeny kijelzőn a kártyák műveleti sora (kapcsoló + törlés) törjön új sorba, ne lógjon ki */
+.flex-wrap.justify-between > .flex.gap-2 { flex-wrap: wrap; max-width: 100%; }
