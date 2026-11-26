@@ -4,7 +4,7 @@ import { db, type CatalogItem, type Inspection, type Point, type Room } from './
 export const norm = (s: string) => s.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase();
 
 export interface SearchResult {
-  projects: Inspection[]; rooms: { room: Room; inspection?: Inspection }[]; points: { point: Point; room?: Room; inspection?: Inspection }[]; elements: CatalogItem[];
+  projects: Inspection[]; rooms: { room: Room; inspection?: Inspection }[]; points: { point: Point; room?: Room; inspection?: Inspection }[]; elements: CatalogItem[]; portableIds: string[];
   more: { projects: boolean; rooms: boolean; points: boolean; elements: boolean };
 }
 
@@ -17,10 +17,12 @@ export async function searchAll(query: string, limit = 100): Promise<SearchResul
   const projects = inspections.filter(i => hit(`${i.name} ${i.property} ${i.address} ${i.client}`)).sort((a, b) => b.updatedAt - a.updatedAt);
   const roomHits = rooms.filter(r => hit(r.name)).sort((a, b) => (im.get(a.inspectionId)?.name ?? '').localeCompare(im.get(b.inspectionId)?.name ?? '', 'hu') || a.order - b.order);
   const points = await db.points.filter(p => hit(`${rm.get(p.roomId)?.name ?? ''} ${p.identifier} ${p.elementName}`)).limit(limit + 1).toArray();
-  const elements = await db.catalog.filter(c => hit(c.name)).limit(limit + 1).toArray();
+  const bElements = await db.catalog.filter(c => hit(c.name)).limit(limit + 1).toArray();
+  const pElements = await db.portableCatalog.filter(c => hit(c.name)).limit(limit + 1).toArray();
+  const elements = [...bElements, ...pElements];
   return {
     projects: projects.slice(0, limit), rooms: roomHits.slice(0, limit).map(room => ({ room, inspection: im.get(room.inspectionId) })),
-    points: points.slice(0, limit).map(point => ({ point, room: rm.get(point.roomId), inspection: im.get(point.inspectionId) })), elements: elements.slice(0, limit),
+    points: points.slice(0, limit).map(point => ({ point, room: rm.get(point.roomId), inspection: im.get(point.inspectionId) })), elements: elements.slice(0, limit), portableIds: pElements.map(c => c.id),
     more: { projects: projects.length > limit, rooms: roomHits.length > limit, points: points.length > limit, elements: elements.length > limit },
   };
 }

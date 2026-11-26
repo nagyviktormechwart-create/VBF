@@ -36,7 +36,7 @@ export default function Search() {
         <div className="flex-1 min-w-0"><div className="font-semibold truncate">{p.identifier}</div><div className="text-sm truncate">{[p.elementName, room?.name, inspection?.name].filter(Boolean).join(' · ')}</div></div>
         {p.result && <span className={`text-xs px-2 py-1 rounded whitespace-nowrap ${COLOR[p.result] ?? 'bg-steel'}`}>{p.result}</span>}</Link></li>)}</ul></>}
     {res && res.elements.length > 0 && <>{head('Mérési elem katalógus', res.elements.length, res.more.elements)}<ul className={box}>{res.elements.map(c => <li key={c.id}>
-      <Link className={row} to={`/katalogus?q=${encodeURIComponent(c.name)}`}><div className="font-semibold">{c.name}</div><div className="text-sm">{c.category}{c.fields.length ? ` · ${c.fields.length} mérési mező` : ''}</div></Link></li>)}</ul></>}
+      <Link className={row} to={`/katalogus?l=${res.portableIds.includes(c.id) ? 'hordozhato' : 'ingatlan'}&q=${encodeURIComponent(c.name)}`}><div className="font-semibold">{c.name}</div><div className="text-sm">{c.category}{c.fields.length ? ` · ${c.fields.length} mérési mező` : ''}{res.portableIds.includes(c.id) ? ' · hordozható eszközök' : ''}</div></Link></li>)}</ul></>}
     {res && (res.more.projects || res.more.rooms || res.more.points || res.more.elements) && <p className="text-sm">Sok a találat, szűkítsd a keresést további szavakkal.</p>}
   </div>;
 }

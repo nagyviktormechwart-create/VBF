@@ -864,3 +864,39 @@ header.bg-chrome { transition: box-shadow var(--d2), background-color var(--d2);
 
 /* keskeny kijelzőn a kártyák műveleti sora (kapcsoló + törlés) törjön új sorba, ne lógjon ki */
 .flex-wrap.justify-between > .flex.gap-2 { flex-wrap: wrap; max-width: 100%; }
+
+
+/* ==========================================================================
+   Felülvizsgálat fajtájának választása (két csempe) és háromgombos mezők
+   ========================================================================== */
+.vn-choices { display: grid; grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); gap: .875rem; }
+.vn-choice {
+  position: relative; overflow: hidden; display: flex; flex-direction: column; align-items: flex-start; gap: .5rem; text-align: left;
+  min-height: 12rem; padding: 1.25rem 1.25rem 1.375rem; border-radius: 24px; cursor: pointer;
+  border: 2px solid var(--color-line); background: var(--color-surface); color: var(--color-ink);
+  box-shadow: var(--vn-shadow-card); transition: border-color .2s, box-shadow .25s, transform .35s var(--vn-spring, cubic-bezier(.34, 1.56, .64, 1)), background-color .2s;
+}
+.vn-choice:hover { border-color: color-mix(in oklab, var(--color-ink) 30%, var(--color-line)); }
+.vn-choice:active { transform: scale(.975); }
+.vn-choice-ic {
+  display: grid; place-items: center; width: 3.5rem; height: 3.5rem; border-radius: 18px; margin-bottom: .25rem;
+  background: var(--color-chrome); color: var(--vn-lime);
+}
+.vn-choice-t { font-size: 1.1875rem; font-weight: 700; letter-spacing: -.015em; line-height: 1.2; }
+.vn-choice-d { font-size: .9375rem; line-height: 1.4; color: var(--vn-muted); }
+.vn-choice-n { margin-top: auto; font-size: .8125rem; font-weight: 650; color: var(--vn-muted); }
+.vn-choice[aria-checked='true'] { border-color: var(--color-signal); box-shadow: 0 0 0 4px var(--vn-ring); }
+:root[data-theme='dark'] .vn-choice[aria-checked='true'] { border-color: var(--vn-lime); }
+.vn-choice[aria-checked='true']::after {
+  content: '✓'; position: absolute; top: 14px; right: 16px; display: grid; place-items: center; width: 30px; height: 30px; border-radius: 50%;
+  background: var(--color-signal); color: #fff; font-weight: 700;
+}
+:root[data-theme='dark'] .vn-choice[aria-checked='true']::after { background: var(--vn-lime); color: #0b1a12; }
+@media (prefers-reduced-motion: no-preference) {
+  .vn-choice[aria-checked='true']::after { animation: vn-pop var(--d2, .5s) var(--vn-ease, ease-out); }
+  .vn-choice[aria-checked='true'] .vn-choice-ic { animation: vn-pop-soft var(--d2, .5s) var(--vn-spring, ease-out); }
+  .vn-choices > .vn-choice { animation-name: vn-tile; animation-duration: var(--d3, .85s); animation-timing-function: var(--vn-spring, ease-out); animation-fill-mode: backwards; }
+  .vn-choices > .vn-choice:nth-child(2) { animation-delay: var(--st, 80ms); }
+}
+.vn-segs-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.vn-seg:disabled { opacity: .45; cursor: not-allowed; }

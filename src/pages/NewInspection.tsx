@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { z } from 'zod';
-import { BUILDING_TYPES, createInspection, db } from '../db';
+import { Building2, PlugZap } from 'lucide-react';
+import { BUILDING_TYPES, createInspection, db, type InspectionKind } from '../db';
 import { useLiveQuery } from 'dexie-react-hooks';
 
 const schema = z.object({
@@ -19,14 +20,21 @@ export default function NewInspection() {
   const [f, setF] = useState({ name: '', property: '', address: '', buildingType: BUILDING_TYPES[0], client: '', inspector: '',
     date: new Date().toISOString().slice(0, 10), type: 'Időszakos', notes: '' });
   const [err, setErr] = useState<string[]>([]);
+  // A felülvizsgálat fajtája: ez dönti el, mely menüpontok és melyik mérési elem lista jelenik meg a projektben.
+  const [kind, setKind] = useState<InspectionKind>('ingatlan'); const portable = kind === 'hordozható';
+  function pick(k: InspectionKind) {
+    setKind(k);
+    if (k === 'hordozható' && f.buildingType === BUILDING_TYPES[0]) setF({ ...f, buildingType: 'Iroda' });
+    if (k === 'ingatlan' && f.buildingType === 'Iroda') setF({ ...f, buildingType: BUILDING_TYPES[0] });
+  }
   const set = (k: keyof typeof f) => (e: { target: { value: string } }) => setF({ ...f, [k]: e.target.value });
   const types = [...new Set(['Első', 'Időszakos', 'Rendkívüli', ...customTypes])];
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     const r = schema.safeParse({ ...f, inspector: f.inspector || defInspector || '' });
-    if (!r.success) return setErr(r.error.issues.map(i => i.message));
-    const id = await createInspection(r.data);
+    if (!r.success) return setErr(r.error.issues.map(i => (portable && i.message === 'Add meg az ingatlan címét.' ? 'Add meg a helyszín címét.' : i.message)));
+    const id = await createInspection({ ...r.data, kind });
     nav(`/felulvizsgalat/${id}`);
   }
   const F = (label: string, k: keyof typeof f, extra: object = {}) =>
@@ -34,8 +42,19 @@ export default function NewInspection() {
 
   return <form onSubmit={submit} className="space-y-4 max-w-2xl">
     <h1 className="text-2xl font-bold">Új felülvizsgálat</h1>
+    <div><div className="lbl" id="lbl-kind">Mit szeretnél felülvizsgálni? *</div>
+      <div className="vn-choices" role="radiogroup" aria-labelledby="lbl-kind">
+        <button type="button" role="radio" aria-checked={!portable} className="vn-choice" onClick={() => pick('ingatlan')}>
+          <span className="vn-choice-ic"><Building2 size={26} /></span>
+          <span className="vn-choice-t">Épület villamos felülvizsgálata</span>
+          <span className="vn-choice-d">Villamos biztonsági felülvizsgálat: helyiségek, elosztók és áramkörök, ÁVK teszt, szemrevételezés.</span></button>
+        <button type="button" role="radio" aria-checked={portable} className="vn-choice" onClick={() => pick('hordozható')}>
+          <span className="vn-choice-ic"><PlugZap size={26} /></span>
+          <span className="vn-choice-t">Hordozható eszközök és kéziszerszámok</span>
+          <span className="vn-choice-d">Időszakos érintésvédelmi felülvizsgálat: eszközönként szigetelési ellenállás, védővezető-folytonosság, érintésvédelmi osztály és szemrevételezés.</span></button>
+      </div></div>
     {err.length > 0 && <ul className="border border-bad text-badfg rounded-md p-3 bg-surface">{err.map(m => <li key={m}>{m}</li>)}</ul>}
-    {F('Projekt neve *', 'name')}{F('Ingatlan megnevezése', 'property')}{F('Ingatlan címe *', 'address')}
+    {F('Projekt neve *', 'name')}{F(portable ? 'Helyszín / létesítmény megnevezése' : 'Ingatlan megnevezése', 'property')}{F(portable ? 'Helyszín címe *' : 'Ingatlan címe *', 'address')}
     <div><label className="lbl">Épülettípus</label>
       <select className="inp" value={f.buildingType} onChange={set('buildingType')}>{BUILDING_TYPES.map(b => <option key={b}>{b}</option>)}</select></div>
     {F('Megrendelő neve', 'client')}

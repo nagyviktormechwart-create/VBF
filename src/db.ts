@@ -5,7 +5,12 @@ export type Status = 'folyamatban' | 'befejezett' | 'archivált';
 // 2. fázis: hálózati adatok a felülvizsgálat rekordján belül (opcionális, a régi projekteknél hiányzik). Minden érték szövegként tárolt.
 export interface NetworkData { system?: string; phases?: string; voltage?: string; frequency?: string; feedMode?: string; feedName?: string;
   mainFuseType?: string; mainFuseCurrent?: string; mainFusePoles?: string; mainEarthTerminal?: string; earthingNote?: string; networkNote?: string }
+// A felülvizsgálat fajtája: a hiányzó érték (régi projektek) az épület villamos felülvizsgálatát jelenti.
+export type InspectionKind = 'ingatlan' | 'hordozható';
+export const KIND_LABEL: Record<InspectionKind, string> = { 'ingatlan': 'Épület villamos felülvizsgálata', 'hordozható': 'Hordozható eszközök és kéziszerszámok' };
+export const kindOf = (i?: { kind?: InspectionKind } | null): InspectionKind => i?.kind ?? 'ingatlan';
 export interface Inspection {
+  kind?: InspectionKind;
   id: string; name: string; property: string; address: string; buildingType: string;
   client: string; inspector: string; date: string; type: string; notes: string;
   status: Status; createdAt: number; updatedAt: number; network?: NetworkData;
@@ -45,7 +50,9 @@ export interface RoomTemplate { id: string; name: string; custom: boolean; hidde
 // A kategória, lista, alapérték, kötelező jelleg és megjegyzés opcionális: a régi mezők változatlanul működnek.
 export type FieldType = 'decimal' | 'text' | 'date' | 'bool' | 'select';
 export interface FieldDef { id: string; label: string; unit: string; type: FieldType;
-  category?: string; options?: string[]; defaultValue?: string; required?: boolean; note?: string }
+  category?: string; options?: string[]; defaultValue?: string; required?: boolean; note?: string;
+  // Választólista gombokként (pl. hordozható eszközök szemrevételezése); a mező csak akkor jelenik meg, ha a megadott másik mező értéke a listában van.
+  ui?: 'buttons'; showIf?: { label: string; in: string[] } }
 export type ValueStatus = 'rögzítve' | 'hiányzik' | 'nem végezhető' | 'nem alkalmazható';
 export interface CatalogItem { id: string; name: string; category: string; enabled: boolean; favorite: boolean; custom: boolean; fields: FieldDef[] }
 export interface PointValue { label: string; unit: string; type: FieldType; value: string | number | null; fieldId?: string; status?: ValueStatus }
@@ -55,6 +62,9 @@ export interface Point { id: string; inspectionId: string; roomId: string; catal
   values: PointValue[]; boardId?: string; circuitId?: string; result: string; note: string; createdAt: number; updatedAt: number }
 export const RESULTS = ['Megfelelő', 'Nem megfelelő', 'Nem értékelhető', 'További vizsgálat szükséges', 'Nem alkalmazható'];
 export const CATEGORIES = ['Dugaljak és kapcsolók', 'Világítás', 'Elosztók és védelem', 'Földelés és EPH', 'Egyéb berendezés'];
+// Hordozható eszközök katalógusának kategóriái (az épület-katalógus CATEGORIES listája változatlan).
+export const PORTABLE_CATEGORIES = ['Irodatechnika', 'Hálózati és tápellátó eszközök', 'Konyhai és szociális eszközök', 'Hőtechnika és légtechnika',
+  'Világítás', 'Kéziszerszámok és takarítógépek', 'Egyéb hordozható eszköz'];
 export interface Setting { key: string; value: unknown }
 
 class VbfDb extends Dexie {
@@ -63,6 +73,7 @@ class VbfDb extends Dexie {
   roomTemplates!: Table<RoomTemplate, string>;
   settings!: Table<Setting, string>;
   catalog!: Table<CatalogItem, string>;
+  portableCatalog!: Table<CatalogItem, string>;
   points!: Table<Point, string>;
   boards!: Table<Board, string>;
   circuits!: Table<Circuit, string>;
@@ -87,6 +98,8 @@ class VbfDb extends Dexie {
     this.version(4).stores({ checks: 'id, inspectionId, category' });
     this.version(5).stores({ defects: 'id, inspectionId, status', photos: 'id, inspectionId, [ownerType+ownerId]', photoData: 'id, inspectionId', instruments: 'id, inspectionId' });
     this.version(6).stores({ avkTests: 'id, inspectionId, circuitId' });
+    // v7: a hordozható eszközök külön katalógusa (additív; a meglévő katalógus és az adatok nem változnak).
+    this.version(7).stores({ portableCatalog: 'id, &name, category, favorite, enabled' });
   }
 }
 export const db = new VbfDb();
@@ -110,13 +123,35 @@ const SEED: [string, string, () => FieldDef[]][] = [
   ...['Védővezető', 'Földelővezető', 'Földelési pont', 'Földelőszonda', 'Fő földelőkapocs', 'Fém vízvezeték', 'Fém gázvezeték', 'Fém fűtési csővezeték', 'Egyéb idegen vezetőképes rész'].map(n => [n, CATEGORIES[3], () => []] as [string, string, () => FieldDef[]]),
   ...['Villanybojler', 'Elektromos sütő', 'Főzőlap', 'Klímaberendezés', 'Kazán', 'Szivattyú', 'Elektromos motor', 'Gépészeti berendezés', 'Elektromos kéziszerszám', 'Egyéb villamos berendezés'].map(n => [n, CATEGORIES[4], () => []] as [string, string, () => FieldDef[]]),
 ];
-export async function addCatalogItem(name: string, category: string, fields: FieldDef[], custom = true) {
+// A felülvizsgálat fajtájához tartozó katalógus-tábla: az épületeké a meglévő `catalog`, a hordozható eszközöké a külön `portableCatalog`.
+export const catalogTable = (kind: InspectionKind = 'ingatlan') => (kind === 'hordozható' ? db.portableCatalog : db.catalog);
+export async function addCatalogItem(name: string, category: string, fields: FieldDef[], custom = true, kind: InspectionKind = 'ingatlan') {
   name = name.trim(); if (!name) throw new Error('Add meg az elem nevét.');
-  if (await db.catalog.where('name').equalsIgnoreCase(name).first()) throw new Error('Ilyen nevű elem már szerepel a katalógusban.');
+  const t = catalogTable(kind);
+  if (await t.where('name').equalsIgnoreCase(name).first()) throw new Error('Ilyen nevű elem már szerepel a katalógusban.');
   const id = crypto.randomUUID();
-  await db.catalog.add({ id, name, category, enabled: true, favorite: false, custom, fields });
+  await t.add({ id, name, category, enabled: true, favorite: false, custom, fields });
   return id;
 }
+
+// Hordozható eszközök: minden elemnél ugyanaz a négy mérési mező (a szemrevételezés „Ép” alapértékű gombok; „Sérült”/„Egyéb” esetén leírás is kell).
+const portableFields = (): FieldDef[] => [
+  { id: crypto.randomUUID(), label: 'Szigetelési ellenállás', unit: 'MΩ', type: 'decimal', category: 'Szigetelési ellenállás' },
+  { id: crypto.randomUUID(), label: 'Védővezető-folytonosság', unit: 'Ω', type: 'decimal', category: 'Védővezető és EPH' },
+  { id: crypto.randomUUID(), label: 'Érintésvédelmi osztály', unit: '', type: 'select', options: ['I.', 'II.', 'III.'], category: 'Védővezető és EPH' },
+  { id: crypto.randomUUID(), label: 'Szemrevételezés', unit: '', type: 'select', options: ['Ép', 'Sérült', 'Egyéb'], defaultValue: 'Ép', ui: 'buttons', category: 'Egyéb mérési adatok' },
+  { id: crypto.randomUUID(), label: 'Sérülés / észrevétel', unit: '', type: 'text', required: true, showIf: { label: 'Szemrevételezés', in: ['Sérült', 'Egyéb'] }, category: 'Egyéb mérési adatok' },
+];
+const PORTABLE_SEED: [string, string[]][] = [
+  [PORTABLE_CATEGORIES[0], ['Asztali számítógép', 'Laptop', 'Monitor', 'Nyomtató', 'Multifunkciós készülék / fénymásoló', 'Szkenner', 'Projektor', 'Iratmegsemmisítő', 'Laminálógép', 'Telefonkészülék']],
+  [PORTABLE_CATEGORIES[1], ['Hosszabbító', 'Hordozható elosztó', 'Hálózati töltő / adapter', 'Laptop töltő / tápegység', 'Szünetmentes tápegység (UPS)', 'Switch / router', 'Dokkolóállomás']],
+  [PORTABLE_CATEGORIES[2], ['Vízforraló', 'Kávéfőző', 'Mikrohullámú sütő', 'Hűtőszekrény', 'Vízadagoló', 'Kenyérpirító']],
+  [PORTABLE_CATEGORIES[3], ['Hősugárzó', 'Olajradiátor', 'Ventilátor', 'Hordozható klímaberendezés', 'Páramentesítő / párásító']],
+  [PORTABLE_CATEGORIES[4], ['Asztali lámpa', 'Állólámpa', 'Hordozható munkalámpa']],
+  [PORTABLE_CATEGORIES[5], ['Fúrógép', 'Ütvefúró', 'Sarokcsiszoló', 'Körfűrész', 'Porszívó', 'Magasnyomású mosó']],
+  [PORTABLE_CATEGORIES[6], ['Egyéb hordozható villamos eszköz']],
+];
+const PORTABLE_FAVORITES = new Set(['Laptop', 'Asztali számítógép', 'Monitor', 'Nyomtató', 'Hosszabbító', 'Vízforraló']);
 export async function savePoint(p: Omit<Point, 'createdAt' | 'updatedAt'> & { createdAt?: number }) {
   return tracked(async () => {
     const t = Date.now();
@@ -130,6 +165,10 @@ export const deletePoint = (id: string) => tracked(() => db.transaction('rw', [d
 }));
 
 export async function seed() {
+  // A hordozható katalógus első indításkor feltöltődik; a meglévő épület-katalógushoz nem nyúlunk.
+  if ((await db.portableCatalog.count()) === 0)
+    await db.portableCatalog.bulkAdd(PORTABLE_SEED.flatMap(([category, names]) => names.map(name =>
+      ({ id: crypto.randomUUID(), name, category, enabled: true, favorite: PORTABLE_FAVORITES.has(name), custom: false, fields: portableFields() }))));
   if ((await db.catalog.count()) === 0)
     await db.catalog.bulkAdd(SEED.map(([name, category, f], i) => ({ id: crypto.randomUUID(), name, category, enabled: true, favorite: i < 3, custom: false, fields: f() })));
   // Meglévő katalógus frissítése: Hurokimpedancia és Vonali impedancia legyen az első két mező

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { ArrowDown, ArrowUp, Plus, X } from 'lucide-react';
-import { db, getDefaultUnits, type FieldDef, type FieldType } from '../db';
+import { catalogTable, getDefaultUnits, type FieldDef, type FieldType, type InspectionKind } from '../db';
 import { FIELD_GROUPS, LIBRARY, categoryOf } from '../fields';
 
 export const fieldKey = (f: { label: string; unit: string }) => `${f.label}|${f.unit}`;
@@ -10,8 +10,8 @@ const EMPTY = { label: '', unit: '', type: 'decimal' as FieldType, category: FIE
 
 // Mérési mezők kiválasztása csoportokba rendezett listából, sorrendezéssel és egyéni mező létrehozásával.
 // locked: ezek a mezők nem vehetők ki (pl. már rögzített értékű mezők szerkesztésekor).
-export default function FieldPicker({ value, onChange, locked }: { value: FieldDef[]; onChange: (v: FieldDef[]) => void; locked?: Set<string> }) {
-  const cat = useLiveQuery(() => db.catalog.toArray(), []) ?? [];
+export default function FieldPicker({ value, onChange, locked, kind = 'ingatlan' }: { value: FieldDef[]; onChange: (v: FieldDef[]) => void; locked?: Set<string>; kind?: InspectionKind }) {
+  const cat = useLiveQuery(() => catalogTable(kind).toArray(), [kind]) ?? [];
   const units = useLiveQuery(getDefaultUnits, []) ?? {};
   const [extra, setExtra] = useState<FieldDef[]>([]);
   const [c, setC] = useState(EMPTY); const [cerr, setCerr] = useState('');

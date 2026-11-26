@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { Download, Copy, Archive, Trash2 } from 'lucide-react';
 import { downloadBackup } from '../backup';
-import { db, deleteInspection, duplicateInspection, updateInspection } from '../db';
+import { db, deleteInspection, duplicateInspection, kindOf, updateInspection } from '../db';
 
 export default function Inspections() {
   const [q, setQ] = useState(''); const [show, setShow] = useState<'aktív' | 'archivált'>('aktív');
@@ -19,7 +19,7 @@ export default function Inspections() {
     {shown.length === 0 && <p>Nincs megjeleníthető felülvizsgálat.</p>}
     {shown.map(i => <div key={i.id} className="bg-surface border border-line rounded-md p-4 flex flex-wrap items-center gap-3 justify-between">
       <Link to={`/felulvizsgalat/${i.id}`} className="min-w-0 flex-1">
-        <div className="font-semibold">{i.name}</div><div className="text-sm">{i.address} – {i.status}</div></Link>
+        <div className="font-semibold">{i.name}</div><div className="text-sm">{i.address} – {i.status}{kindOf(i) === 'hordozható' ? ' · Hordozható eszközök' : ''}</div></Link>
       <div className="flex gap-2">
         <label className="flex items-center gap-2 min-h-12 px-1 cursor-pointer">
           <input type="checkbox" role="switch" className="sr-only peer" checked={i.status === 'befejezett'}

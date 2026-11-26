@@ -56,7 +56,7 @@ function shockwave() {
 }
 
 /** 1) Hullámeffekt gombokon, szegmentált választókon és navigációs elemeken. */
-const RIPPLE_TARGETS = '.btn, .vn-seg, aside a, nav.fixed a';
+const RIPPLE_TARGETS = '.btn, .vn-seg, .vn-choice, aside a, nav.fixed a';
 function initRipple() {
   document.addEventListener('pointerdown', (e: PointerEvent) => {
     if (reduced()) return;

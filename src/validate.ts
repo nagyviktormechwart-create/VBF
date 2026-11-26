@@ -1,4 +1,4 @@
-import { valueStatus, type Point } from './db';
+import { kindOf, valueStatus, type Point } from './db';
 import { categoryOf } from './fields';
 import { loadBundle, type Bundle } from './data';
 
@@ -21,7 +21,7 @@ export function validateBundle(B: Bundle): Issue[] {
   const W = 'Figyelmeztetés', I = 'Információ';
 
   if (!insp.inspector.trim()) add(W, 'NINCS_FELULVIZSGALO', 'Felülvizsgálat', insp.id, insp.name, 'A felülvizsgáló neve nincs megadva.');
-  if (!insp.network?.system) add(W, 'HALOZATI_RENDSZER', 'Hálózati adatok', insp.id, insp.name, 'A hálózati rendszer nincs megadva.');
+  if (!insp.network?.system && kindOf(insp) !== 'hordozható') add(W, 'HALOZATI_RENDSZER', 'Hálózati adatok', insp.id, insp.name, 'A hálózati rendszer nincs megadva.');
   if (!insp.overallResult) add(I, 'NINCS_OSSZESITETT_MINOSITES', 'Felülvizsgálat', insp.id, insp.name, 'Az összesített minősítés még nincs megadva.');
   else if (insp.overallResult === 'MEGFELELŐ' && (points.some(p => BAD.includes(p.result)) || checks.some(c => c.result === 'Nem megfelelő') || defects.some(d => OPEN.includes(d.status))))
     add(W, 'ELLENTMONDAS_OSSZESITETT', 'Felülvizsgálat', insp.id, insp.name, 'Az összesített minősítés „MEGFELELŐ”, de van nem megfelelő eredmény vagy nyitott hiba.');
@@ -38,6 +38,8 @@ export function validateBundle(B: Bundle): Issue[] {
     const linked = defects.filter(d => d.pointId === p.id);
     if (p.result === 'Megfelelő' && miss.length) add(W, rec ? 'MEGFELELO_HIANYOS' : 'MEGFELELO_ERTEK_NELKUL', 'Mérési pont', p.id, label,
       rec ? `„Megfelelő” minősítés, de hiányzó mérési érték: ${miss.join(', ')}.` : '„Megfelelő” minősítés mért érték nélkül.');
+    if (p.values.some(v => v.label === 'Szemrevételezés' && v.value === 'Sérült') && p.result === 'Megfelelő')
+      add(W, 'SERULT_DE_MEGFELELO', 'Mérési pont', p.id, label, 'A szemrevételezés „Sérült”, de a minősítés „Megfelelő”.');
     if (!p.result && rec) add(I, 'NINCS_ERTEKELVE', 'Mérési pont', p.id, label, 'A mérés rögzítve van, de még nincs minősítés.');
     if (!p.result && p.values.length && !rec && miss.length === st.length) add(I, 'NINCS_MERVE', 'Mérési pont', p.id, label, 'Még nincs mért érték és minősítés.');
     if (BAD.includes(p.result) && !linked.length) add(W, 'ELTERES_HIBA_NELKUL', 'Mérési pont', p.id, label, `„${p.result}” minősítés, de nincs hozzá hiba rögzítve.`);

@@ -8,7 +8,7 @@ import ProtectionForm from './ProtectionForm';
 import Photos from './Photos';
 import { exportPhotosZip } from '../photos';
 import ExportDialog from './ExportDialog';
-import { addRoom, db, deleteRoom, moveRoom, renameRoom, setRoomArea, type Room } from '../db';
+import { addRoom, db, deleteRoom, kindOf, moveRoom, renameRoom, setRoomArea, type Room } from '../db';
 
 function AreaInput({ r, areas }: { r: Room; areas: string[] }) {
   const [v, setV] = useState(r.area ?? '');
@@ -24,9 +24,11 @@ export default function InspectionDetail() {
   const counts = useLiveQuery(async () => { const m: Record<string, number> = {};
     (await db.points.where('inspectionId').equals(id).toArray()).forEach(p => { m[p.roomId] = (m[p.roomId] ?? 0) + 1; }); return m; }, [id]) ?? {};
   const [dlg, setDlg] = useState<'excel' | 'word' | 'check' | null>(null);
+  const [wordNote, setWordNote] = useState(false);   // hordozható eszközökhöz egyelőre nincs jegyzőkönyv-sablon
   const [name, setName] = useState('');
   const [err, setErr] = useState('');
   if (!insp) return <p>Felülvizsgálat betöltése...</p>;
+  const portable = kindOf(insp) === 'hordozható';   // hordozható eszközök: nincs elosztó/áramkör, ÁVK teszt, külön szemrevételezés és hálózati adat
 
   async function add(n: string) {
     setErr('');
@@ -35,24 +37,25 @@ export default function InspectionDetail() {
   const used = new Set(rooms.map(r => r.name.toLowerCase()));
   return <div className="space-y-5">
     <div><h1 className="text-2xl font-bold">{insp.name}</h1>
-      <p className="text-sm">{insp.address} · {insp.buildingType} · {insp.date} · {insp.type}</p></div>
+      <p className="text-sm">{insp.address} · {insp.buildingType} · {insp.date} · {insp.type}{portable && ' · Hordozható eszközök'}</p></div>
 
     <div className="flex flex-wrap gap-2">
       <Link className="btn btn-primary" to={`/felulvizsgalat/${id}/meres`}>Mérés megkezdése</Link>
       <Link className="btn" to={`/felulvizsgalat/${id}/attekintes`}>Áttekintés</Link>
-      <Link className="btn" to={`/felulvizsgalat/${id}/elosztok`}>Elosztók és áramkörök</Link>
-      <Link className="btn" to={`/felulvizsgalat/${id}/avk`}>ÁVK teszt</Link>
-      <Link className="btn" to={`/felulvizsgalat/${id}/szemrevetelezes`}>Szemrevételezés</Link>
+      {!portable && <Link className="btn" to={`/felulvizsgalat/${id}/elosztok`}>Elosztók és áramkörök</Link>}
+      {!portable && <Link className="btn" to={`/felulvizsgalat/${id}/avk`}>ÁVK teszt</Link>}
+      {!portable && <Link className="btn" to={`/felulvizsgalat/${id}/szemrevetelezes`}>Szemrevételezés</Link>}
       <Link className="btn" to={`/felulvizsgalat/${id}/hibak`}>Hibák és hiányosságok</Link>
       <Link className="btn" to={`/felulvizsgalat/${id}/muszerek`}>Mérőműszerek</Link>
       <button className="btn" onClick={() => setDlg('check')}>Projekt ellenőrzése</button>
       <button className="btn" onClick={() => setDlg('excel')}>Excel exportálás</button>
-      <button className="btn" onClick={() => setDlg('word')}>Jegyzőkönyv (Word)</button>
+      <button className="btn" onClick={() => { if (!portable) { setDlg('word'); return; } setWordNote(true); setTimeout(() => setWordNote(false), 9000); }}>Jegyzőkönyv (Word)</button>
       <button className="btn" onClick={() => exportPhotosZip(id)}>Fényképek exportja (ZIP)</button>
     </div>
+    {wordNote && <p role="status" className="bg-warnbg border border-warn text-warnfg rounded-md p-3 text-sm font-semibold">Hordozható eszközökhöz a jegyzőkönyv sablon még nincs kész, ezért most nem készül Word-dokumentum. Az Excel exportálást és a fényképek exportját addig is használhatod.</p>}
     {dlg && <ExportDialog id={id} mode={dlg} onClose={() => setDlg(null)} />}
     <PropertyForm key={insp.id} insp={insp} />
-    <NetworkForm key={'n' + insp.id} insp={insp} />
+    {!portable && <NetworkForm key={'n' + insp.id} insp={insp} />}
     <ProtectionForm key={'p' + insp.id} insp={insp} />
     <details className="bg-surface border border-line rounded-md"><summary className="p-4 min-h-14 cursor-pointer font-semibold">Mellékletek (pl. képesítési bizonylatok képe)</summary>
       <div className="p-4 pt-0 space-y-2"><p className="text-sm">A képek csak ezen a készüléken tárolódnak, az Excel nem tartalmazza őket (a fényképek ZIP-jébe bekerülnek). Személyes adatot tartalmazó bizonylatot csak a szükséges mértékben csatolj.</p>

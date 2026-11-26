@@ -39,6 +39,7 @@ const RULES: Record<string, z.ZodTypeAny> = {
   rooms: z.object({ id, inspectionId: z.string(), name: z.string() }).passthrough(),
   points: z.object({ id, inspectionId: z.string(), roomId: z.string(), elementName: z.string(), identifier: z.string(), values: z.array(z.unknown()) }).passthrough(),
   catalog: z.object({ id, name: z.string(), fields: z.array(z.unknown()) }).passthrough(),
+  portableCatalog: z.object({ id, name: z.string(), fields: z.array(z.unknown()) }).passthrough(),
   roomTemplates: z.object({ id, name: z.string() }).passthrough(),
   boards: z.object({ id, inspectionId: z.string(), identifier: z.string() }).passthrough(),
   avkTests: z.object({ id, inspectionId: z.string(), circuitId: z.string() }).passthrough(),
@@ -85,9 +86,10 @@ export async function applyBackup(b: Backup) {
   const result: Record<string, number> = {}; let merged = 0;
   await db.transaction('rw', db.tables, async () => {
     const remap = new Map<string, string>();
-    for (const t of [...db.tables].sort((a, c) => (a.name === 'catalog' ? -1 : 0) - (c.name === 'catalog' ? -1 : 0))) {
+    const isCat = (n: string) => n === 'catalog' || n === 'portableCatalog';
+    for (const t of [...db.tables].sort((a, c) => (isCat(a.name) ? -1 : 0) - (isCat(c.name) ? -1 : 0))) {
       let rows = b.tables[t.name]; if (!rows?.length) continue;
-      if (t.name === 'catalog' || t.name === 'roomTemplates') {
+      if (isCat(t.name) || t.name === 'roomTemplates') {
         const ex = (await t.toArray()) as Row[];
         const byName = new Map(ex.map(e => [String(e.name).toLowerCase(), e]));
         rows = rows.filter(r => { const e = byName.get(String(r.name).toLowerCase());

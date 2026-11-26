@@ -5,10 +5,11 @@ import FieldPicker, { fieldKey } from './FieldPicker';
 import Photos from './Photos';
 import { categoryOf } from '../fields';
 import { AlertOctagon, AlertTriangle, Camera, Copy, Maximize2, Minimize2, Pencil, Trash2 } from 'lucide-react';
-import { addCatalogItem, createDefect, db, deletePoint, savePoint, RESULTS, valueStatus, type FieldDef, type ValueStatus, type Point, type PointValue } from '../db';
+import { addCatalogItem, catalogTable, createDefect, db, deletePoint, kindOf, PORTABLE_CATEGORIES, savePoint, RESULTS, valueStatus, type FieldDef, type ValueStatus, type Point, type PointValue } from '../db';
 
 const COLOR: Record<string, string> = { 'Megfelelő': 'bg-ok text-white', 'Nem megfelelő': 'bg-bad text-white', 'Nem értékelhető': 'bg-slate-400 text-white', 'Nem alkalmazható': 'bg-slate-500 text-white', 'További vizsgálat szükséges': 'bg-amber-400 text-graphite' };
 const RKEY: Record<string, string> = { 'Megfelelő': 'ok', 'Nem megfelelő': 'bad', 'Nem értékelhető': 'ne', 'Nem alkalmazható': 'na', 'További vizsgálat szükséges': 'more' };
+const VKEY: Record<string, string> = { 'Ép': 'ok', 'Sérült': 'bad', 'Egyéb': 'more' };   // gombos mezők színe (pl. hordozható eszközök szemrevételezése)
 const nextIdent = (name: string, pts: Point[]) => {
   const n = Math.max(0, ...pts.filter(p => p.elementName.toLowerCase() === name.toLowerCase()).map(p => parseInt(p.identifier.match(/(\d+)\s*$/)?.[1] ?? '0')));
   return `${name} ${String(n + 1).padStart(2, '0')}`;
@@ -30,9 +31,11 @@ export default function Measure() {
   useEffect(() => { if (tick) fieldsRef.current?.querySelector<HTMLElement>('.inp:not([disabled])')?.focus(); }, [tick]);
   const pc = useLiveQuery(async () => { const m: Record<string, number> = {}; (await db.photos.where('inspectionId').equals(id).toArray()).forEach(x => { if (x.ownerType === 'point') m[x.ownerId] = (m[x.ownerId] ?? 0) + 1; }); return m; }, [id]) ?? {};
   const rooms = useLiveQuery(() => db.rooms.where('inspectionId').equals(id).sortBy('order'), [id]) ?? [];
+  const kind = kindOf(useLiveQuery(() => db.inspections.get(id), [id])); const portable = kind === 'hordozható';
+  const autoBad = useRef(false);   // a „Sérült” szemrevételezés automatikusan „Nem megfelelő” minősítést ajánl; ha visszaáll „Ép”-re, a minősítés is visszaáll
   const boards = useLiveQuery(() => db.boards.where('inspectionId').equals(id).sortBy('order'), [id]) ?? [];
   const circuits = useLiveQuery(() => db.circuits.where('inspectionId').equals(id).sortBy('order'), [id]) ?? [];
-  const catalog = useLiveQuery(() => db.catalog.toArray(), []) ?? [];
+  const catalog = useLiveQuery(() => catalogTable(kind).toArray(), [kind]) ?? [];
   // Helyiségenkénti haladás: pontok száma, plusz jelzés, ha van nem megfelelő vagy hiányos pont.
   const stat = useLiveQuery(async () => { const m: Record<string, { n: number; bad: number; miss: number }> = {};
     for (const p of await db.points.where('inspectionId').equals(id).toArray()) { const s = (m[p.roomId] ??= { n: 0, bad: 0, miss: 0 }); s.n++;
@@ -48,7 +51,13 @@ export default function Measure() {
   const el = catalog.find(c => c.name.toLowerCase() === name.toLowerCase());
   const enabled = catalog.filter(c => c.enabled).sort((a, b) => Number(b.favorite) - Number(a.favorite) || a.name.localeCompare(b.name, 'hu'));
   const ident = override ?? (name && !editing ? nextIdent(name, points) : '');
-  const baseFields: FieldDef[] = editing ? editing.values.map(v => ({ id: v.label, label: v.label, unit: v.unit, type: v.type })) : el ? el.fields : newFields;
+  const src = editing ? catalog.find(c => c.id === editing.catalogId) : undefined;
+  const baseFields: FieldDef[] = editing
+    ? [...editing.values.map(v => { const d = src?.fields.find(x => x.label === v.label && x.unit === v.unit);
+        return { id: v.label, label: v.label, unit: v.unit, type: v.type, ...(d?.options ? { options: d.options } : {}), ...(d?.ui ? { ui: d.ui } : {}), ...(d?.showIf ? { showIf: d.showIf } : {}) } as FieldDef; }),
+      // feltételes mező (pl. sérülés leírása), amely a mentéskor még nem volt kitöltve, szerkesztéskor újra elérhető
+      ...(src?.fields.filter(d => d.showIf && !editing.values.some(v => v.label === d.label)).map(d => ({ ...d, id: d.label })) ?? [])]
+    : el ? el.fields : newFields;
   const fields = fieldOv ?? baseFields;
   const locked = editing ? new Set(baseFields.map(fieldKey)) : undefined;
   // Korábban beírt szöveges értékek mezőnként: javaslatként a listában.
@@ -56,8 +65,17 @@ export default function Measure() {
     for (const p of await db.points.toArray()) for (const v of p.values) if (v.type === 'text' && typeof v.value === 'string' && v.value) (m[v.label] ??= new Set()).add(v.value);
     return m; }, []) ?? {};
   const cur = (f: FieldDef) => vals[f.id] ?? (editing ? '' : f.defaultValue ?? '');
+  const isShown = (f: FieldDef) => { if (!f.showIf) return true; const c = fields.find(x => x.label === f.showIf!.label); return !!c && !fstat[c.id] && f.showIf.in.includes(cur(c)); };
+  function pickVal(f: FieldDef, o: string) {
+    setVal(f, o);
+    if (portable && f.label === 'Szemrevételezés') {
+      if (o === 'Sérült' && result === 'Megfelelő') { setResult('Nem megfelelő'); autoBad.current = true; }
+      else if (o === 'Ép' && autoBad.current && result === 'Nem megfelelő') { setResult('Megfelelő'); autoBad.current = false; }
+    }
+  }
+  const fieldIdOf = (f: FieldDef) => editing ? (editing.values.find(v => v.label === f.label)?.fieldId ?? src?.fields.find(x => x.label === f.label)?.id) : f.id;
 
-  function reset(keepEl = true) { if (editing) setFieldOv(null); setVals({}); setFstat({}); setResult('Megfelelő'); setNote(''); setOverride(null); setEditing(null); setErr(''); if (!keepEl) { setElName(''); setNewFields([]); setFieldOv(null); } }
+  function reset(keepEl = true) { autoBad.current = false; if (editing) setFieldOv(null); setVals({}); setFstat({}); setResult('Megfelelő'); setNote(''); setOverride(null); setEditing(null); setErr(''); if (!keepEl) { setElName(''); setNewFields([]); setFieldOv(null); } }
   function edit(p: Point) {
     setEditing(p); setFieldOv(null); setBoardId(p.boardId ?? ''); setCircuitId(p.circuitId ?? ''); setElName(p.elementName); setOverride(p.identifier); setResult(p.result); setNote(p.note); setErr('');
     setVals(Object.fromEntries(p.values.map(v => [v.label, v.value == null ? '' : String(v.value)])));
@@ -79,16 +97,17 @@ export default function Measure() {
     if (!ident.trim()) return setErr('A mérési pont azonosítója nem lehet üres.');
     const values: PointValue[] = [];
     for (const f of fields) {
+      if (!isShown(f)) continue;
       const fs = fstat[f.id];
-      if (fs) { values.push({ label: f.label, unit: f.unit, type: f.type, value: null, status: fs, fieldId: editing ? editing.values.find(v => v.label === f.label)?.fieldId : f.id }); continue; }
+      if (fs) { values.push({ label: f.label, unit: f.unit, type: f.type, value: null, status: fs, fieldId: fieldIdOf(f) }); continue; }
       const raw = cur(f).trim(); let value: string | number | null = raw || null;
       if (f.required && !raw) return setErr(`A(z) „${f.label}” mező kitöltése kötelező.`);
       if (raw && f.type === 'decimal' && /^[<>]=?\s*\d/.test(raw)) value = raw.replace(',', '.').replace(/\s+/g, '');   // pl. „>999”: határérték-jellegű eredmény
       else if (raw && f.type === 'decimal') { value = Number(raw.replace(',', '.')); if (Number.isNaN(value)) return setErr(`A(z) „${f.label}” mezőbe számot adj meg.`); }
-      values.push({ label: f.label, unit: f.unit, type: f.type, value, status: value === null ? 'hiányzik' : 'rögzítve', fieldId: editing ? editing.values.find(v => v.label === f.label)?.fieldId : f.id });
+      values.push({ label: f.label, unit: f.unit, type: f.type, value, status: value === null ? 'hiányzik' : 'rögzítve', fieldId: fieldIdOf(f) });
     }
     let catalogId = editing?.catalogId ?? el?.id;
-    if (!el && !editing && saveCat) catalogId = await addCatalogItem(name, 'Egyéb berendezés', newFields);
+    if (!el && !editing && saveCat) catalogId = await addCatalogItem(name, portable ? PORTABLE_CATEGORIES[PORTABLE_CATEGORIES.length - 1] : 'Egyéb berendezés', newFields, true, kind);
     await savePoint({ id: editing?.id ?? crypto.randomUUID(), createdAt: editing?.createdAt, inspectionId: id, roomId: room.id, catalogId,
       elementName: name, identifier: ident.trim(), values, boardId: boardId || undefined, circuitId: circuitId || undefined, result, note });
     reset(); if (!editing) setTick(t => t + 1);
@@ -123,7 +142,7 @@ export default function Measure() {
         <input className="inp" list="els" value={elName} disabled={!!editing} onChange={e => { setElName(e.target.value); setOverride(null); setNewFields([]); setFieldOv(null); }} />
         <datalist id="els">{enabled.map(c => <option key={c.id} value={c.name} />)}</datalist></div>
       {name && !el && !editing && <label className="flex items-center gap-2 min-h-12"><input type="checkbox" className="size-6" checked={saveCat} onChange={e => setSaveCat(e.target.checked)} />Mentés a mérési elem katalógusba</label>}
-      {name && !el && !editing && <FieldPicker value={newFields} onChange={setNewFields} />}
+      {name && !el && !editing && <FieldPicker value={newFields} onChange={setNewFields} kind={kind} />}
       <div><label className="lbl">Mérési pont azonosítója</label><input className="inp" value={ident} onChange={e => setOverride(e.target.value)} /></div>
       {boards.length > 0 && <div className="grid sm:grid-cols-2 gap-3">
         <div><label className="lbl">Elosztó</label><select className="inp" value={boardId} onChange={e => { setBoardId(e.target.value); setCircuitId(''); }}>
@@ -132,18 +151,21 @@ export default function Measure() {
           <option value="">Nincs megadva</option>{circuits.filter(c => c.boardId === boardId).map(c => <option key={c.id} value={c.id}>{c.identifier}{c.name && ` – ${c.name}`}</option>)}</select></div>
       </div>}
       {name && (el || editing) && <details className="border border-line rounded-md"><summary className="p-3 min-h-12 cursor-pointer font-semibold">Mérési mezők módosítása ehhez a ponthoz</summary>
-        <div className="p-3 pt-0 space-y-2"><FieldPicker value={fields} onChange={setFieldOv} locked={locked} />
+        <div className="p-3 pt-0 space-y-2"><FieldPicker value={fields} onChange={setFieldOv} locked={locked} kind={kind} />
           {fieldOv && <button className="btn" onClick={() => setFieldOv(null)}>Vissza az alapmezőkhöz</button>}</div></details>}
       <div ref={fieldsRef} className="grid sm:grid-cols-2 gap-3" onKeyDown={e => {
         if (e.key !== 'Enter' || e.shiftKey || (e.target as HTMLElement).tagName !== 'INPUT') return;
         const list = [...e.currentTarget.querySelectorAll<HTMLElement>('.inp:not([disabled])')]; const i = list.indexOf(e.target as HTMLElement);
         if (i < 0) return; e.preventDefault(); if (i < list.length - 1) list[i + 1].focus(); else save();
-      }}>{fields.map((f, fi) => <div key={f.id}>
+      }}>{fields.filter(isShown).map((f, fi) => <div key={f.id} className={f.ui === 'buttons' || f.showIf ? 'sm:col-span-2' : undefined}>
         <div className="flex items-center justify-between gap-2"><label className="lbl">{f.label}{f.unit && ` (${f.unit})`}</label>
           <select aria-label="Mező állapota" className="text-xs border border-line rounded bg-surface min-h-8 mb-1" value={fstat[f.id] ?? ''}
             onChange={e => { setFstat({ ...fstat, [f.id]: e.target.value as ValueStatus | '' }); if (e.target.value) setVals({ ...vals, [f.id]: '' }); }}>
             <option value="">Automatikus</option><option value="nem végezhető">Nem végezhető</option><option value="nem alkalmazható">Nem alkalmazható</option></select></div>
-        {f.type === 'bool' || f.type === 'select'
+        {f.ui === 'buttons'
+          ? <div className="vn-segs vn-segs-3" role="radiogroup" aria-label={f.label}>{(f.options ?? []).map(o => <button key={o} type="button" role="radio" aria-checked={cur(f) === o} disabled={!!fstat[f.id]}
+              className="vn-seg" data-k={VKEY[o] ?? 'none'} onClick={() => pickVal(f, o)}>{o}</button>)}</div>
+          : f.type === 'bool' || f.type === 'select'
           ? <select className="inp" disabled={!!fstat[f.id]} value={cur(f)} onChange={e => setVal(f, e.target.value)}><option value="">Nincs megadva</option>
               {(f.type === 'bool' ? ['Igen', 'Nem'] : f.options ?? []).map(o => <option key={o}>{o}</option>)}</select>
           : <input className="inp" disabled={!!fstat[f.id]} type={f.type === 'date' ? 'date' : 'text'} inputMode={f.type === 'decimal' && categoryOf(f) !== 'ÁVK-vizsgálatok' ? 'decimal' : 'text'} enterKeyHint={fi === fields.length - 1 ? 'done' : 'next'} value={cur(f)}
@@ -153,7 +175,7 @@ export default function Measure() {
         {f.label === 'Várható zárlati áram' && fields.some(x => x.label === 'Vonali impedancia') && <p className="text-xs mt-1">Automatikusan számolva: 230 V / vonali impedancia (kézzel is átírható).</p>}</div>)}</div>
       <div><label className="lbl" id="lbl-result">Minősítés</label>
         <div className="vn-segs" role="radiogroup" aria-labelledby="lbl-result">{[...RESULTS, ''].map(r => <button key={r || 'none'} type="button" role="radio" aria-checked={result === r}
-          className="vn-seg" data-k={RKEY[r] ?? 'none'} onClick={() => setResult(r)}>{r || 'Nincs megadva'}</button>)}</div></div>
+          className="vn-seg" data-k={RKEY[r] ?? 'none'} onClick={() => { setResult(r); autoBad.current = false; }}>{r || 'Nincs megadva'}</button>)}</div></div>
       <div><label className="lbl">Megjegyzés</label><textarea className="inp py-2" rows={2} value={note} onChange={e => setNote(e.target.value)} /></div>
       {err && <p className="text-badfg font-semibold">{err}</p>}
       <div className="flex gap-2"><button className="btn btn-primary flex-1" onClick={save}>{editing ? 'Módosítás mentése' : 'Mérési pont mentése'}</button>

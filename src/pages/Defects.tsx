@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { Plus, Trash2 } from 'lucide-react';
-import { createDefect, db, deleteDefect, updateDefect, DEFECT_STATUSES, type Defect } from '../db';
+import { createDefect, db, deleteDefect, kindOf, updateDefect, DEFECT_STATUSES, type Defect } from '../db';
 import Photos from './Photos';
 import { DEFECT_SEVERITY_SUGGESTIONS } from '../doctemplates';
 
@@ -22,6 +22,7 @@ const Sel = ({ label, value, onChange, opts }: { label: string; value: string; o
 export default function Defects() {
   const { id = '' } = useParams(); const [sp] = useSearchParams(); const focus = sp.get('h');
   const q = <T,>(f: () => Promise<T[]>) => useLiveQuery(f, [id]) ?? [];
+  const portable = kindOf(useLiveQuery(() => db.inspections.get(id), [id])) === 'hordozható';
   const defects = q(() => db.defects.where('inspectionId').equals(id).sortBy('seq'));
   const rooms = q(() => db.rooms.where('inspectionId').equals(id).sortBy('order'));
   const boards = q(() => db.boards.where('inspectionId').equals(id).sortBy('order'));
@@ -44,10 +45,12 @@ export default function Defects() {
         <Txt area label="Részletes leírás" value={d.description} onCommit={v => set({ description: v })} />
         <Txt label="Kategória" value={d.category} list={sugg('category')} onCommit={v => set({ category: v })} />
         <Sel label="Helyiség" value={d.roomId ?? ''} onChange={v => set({ roomId: v || undefined })} opts={rooms.map(r => [r.id, r.name])} />
+        {!portable && <>
         <Sel label="Elosztó" value={d.boardId ?? ''} onChange={v => set({ boardId: v || undefined, circuitId: undefined })} opts={boards.map(b => [b.id, b.identifier + (b.name ? ` – ${b.name}` : '')])} />
         <Sel label="Áramkör" value={d.circuitId ?? ''} onChange={v => set({ circuitId: v || undefined })} opts={circuits.filter(c => !d.boardId || c.boardId === d.boardId).map(c => [c.id, c.identifier + (c.name ? ` – ${c.name}` : '')])} />
+        </>}
         <Sel label="Kapcsolódó mérési pont / eredmény" value={d.pointId ?? ''} onChange={v => set({ pointId: v || undefined })} opts={points.map(p => [p.id, `${rname(p.roomId) ?? ''} – ${p.identifier}`])} />
-        <Sel label="Kapcsolódó szemrevételezési tétel" value={d.checkId ?? ''} onChange={v => set({ checkId: v || undefined })} opts={checks.map(c => [c.id, `${c.category}: ${c.title}`])} />
+        {!portable && <Sel label="Kapcsolódó szemrevételezési tétel" value={d.checkId ?? ''} onChange={v => set({ checkId: v || undefined })} opts={checks.map(c => [c.id, `${c.category}: ${c.title}`])} />}
         <Txt area label="Javasolt intézkedés" value={d.action} onCommit={v => set({ action: v })} />
         <Sel label="Javítás szükséges" value={d.repairNeeded} onChange={v => set({ repairNeeded: v as Defect['repairNeeded'] })} opts={[['Igen', 'Igen'], ['Nem', 'Nem']]} />
         <div><label className="lbl">Javítás állapota</label><select className="inp" value={d.status} onChange={e => set({ status: e.target.value as Defect['status'] })}>{DEFECT_STATUSES.map(s => <option key={s}>{s}</option>)}</select></div>
